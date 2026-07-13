@@ -189,6 +189,14 @@ function MatchRow({ match, job }: { match: Match; job: Job }) {
                 Dealbreaker
               </span>
             )}
+            {match.emailedAt && (
+              <span
+                title={`Included in your ${formatDate(match.emailedAt)} email`}
+                className="rounded-full border border-border px-2 py-1 text-xs font-medium text-muted"
+              >
+                Sent
+              </span>
+            )}
             <span
               title="Match score out of 100"
               className="flex flex-col items-center rounded-lg bg-accent-soft px-2.5 py-1 leading-none"

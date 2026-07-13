@@ -5,7 +5,11 @@ type Preferences = typeof jobPreferences.$inferSelect;
 
 const MAX_RESULTS = 15;
 
-export function buildSearchPrompt(profile: Profile, preferences: Preferences): string {
+export function buildSearchPrompt(
+  profile: Profile,
+  preferences: Preferences,
+  knownJobs: string[] = [],
+): string {
   const sections: string[] = [];
 
   sections.push(
@@ -41,10 +45,20 @@ export function buildSearchPrompt(profile: Profile, preferences: Preferences): s
       .trim(),
   );
 
+  if (knownJobs.length > 0) {
+    sections.push(
+      [
+        "# Already found on previous runs (do NOT include these again)",
+        "The candidate has already been shown these — resubmitting them wastes a result slot:",
+        ...knownJobs.map((job) => `- ${job}`),
+      ].join("\n"),
+    );
+  }
+
   sections.push(
     [
       "# Your task",
-      `Search the web for real, currently open job postings that genuinely fit this candidate. Prioritize quality over quantity — up to ${MAX_RESULTS} strong candidates is plenty; fewer honest matches beat a padded list.`,
+      `Search the web for real, currently open job postings that genuinely fit this candidate. Prioritize quality over quantity — up to ${MAX_RESULTS} strong candidates is plenty; fewer honest matches beat a padded list. Prefer recently posted listings — a great job posted this week beats an equally great one posted months ago that may already be filled.`,
       "Cast a wide net across different kinds of sources rather than relying on just one or two searches — for example: LinkedIn Jobs, Indeed, Glassdoor, ZipRecruiter, Wellfound/AngelList (for startups), Y Combinator's Work at a Startup board, industry- or role-specific boards where relevant, and individual company career pages (especially any companies named above). Don't stop after the first search; run several searches with different phrasing and sources to find the best possible set of matches.",
       "For each listing you include, read enough of it to honestly judge fit against the resume and everything above, and note the experience level or years of experience it asks for.",
       "Don't exclude a job just because it conflicts with something the candidate said matters to them — include it, but set dealbreaker_hit to true and reflect that honestly in the score and reasoning.",

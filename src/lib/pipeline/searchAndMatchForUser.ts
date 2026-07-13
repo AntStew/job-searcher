@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { jobMatches, jobPreferences, userProfiles } from "@/db/schema";
+import { jobMatches, jobPreferences, jobs, userProfiles } from "@/db/schema";
 import { buildSearchPrompt } from "./buildSearchPrompt";
 import { upsertJobs } from "@/lib/jobSources/upsertJobs";
 import type { NormalizedJob } from "@/lib/jobSources/types";
@@ -107,7 +107,19 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     return { found: 0, upserted: 0, scored: 0, errors: ["No profile or preferences set yet"] };
   }
 
-  const prompt = buildSearchPrompt(profile, preferences);
+  // Tell the agent which jobs this user already has, so it doesn't spend
+  // result slots resurfacing them (duplicates get dropped on insert anyway,
+  // which would silently shrink the digest).
+  const recentMatches = await db
+    .select({ title: jobs.title, company: jobs.company })
+    .from(jobMatches)
+    .innerJoin(jobs, eq(jobMatches.jobId, jobs.id))
+    .where(eq(jobMatches.userId, userId))
+    .orderBy(desc(jobMatches.scoredAt))
+    .limit(40);
+  const knownJobs = recentMatches.map((row) => `${row.title} at ${row.company}`);
+
+  const prompt = buildSearchPrompt(profile, preferences, knownJobs);
   const errors: string[] = [];
 
   let response;
@@ -124,6 +136,13 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     });
   } catch (err) {
     const message = `Search agent call failed: ${err instanceof Error ? err.message : String(err)}`;
+    console.error("[searchAndMatchForUser]", message);
+    return { found: 0, upserted: 0, scored: 0, errors: [message] };
+  }
+
+  if (response.stop_reason === "max_tokens") {
+    const message =
+      "Search agent ran out of room before finishing its results — its submission was cut off and discarded.";
     console.error("[searchAndMatchForUser]", message);
     return { found: 0, upserted: 0, scored: 0, errors: [message] };
   }
