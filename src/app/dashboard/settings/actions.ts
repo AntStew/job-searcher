@@ -13,12 +13,16 @@ const settingsSchema = z.object({
   locations: z.string().max(2000),
   remotePreference: z.enum(["remote", "hybrid", "onsite", "no_preference"]),
   salaryMin: z.string().optional(),
+  yearsOfExperience: z.string().optional(),
   industries: z.string().max(2000),
-  mustHaves: z.string().max(4000),
-  dealbreakers: z.string().max(4000),
+  aboutYou: z.string().max(4000),
   watchTargets: z.string().max(2000),
   matchThreshold: z.coerce.number().int().min(0).max(100),
-  emailFrequency: z.enum(["daily", "every_3_days", "weekly", "paused"]),
+  emailFrequency: z.enum(["daily", "weekly", "monthly", "paused"]),
+  scheduleHour: z.coerce.number().int().min(0).max(23),
+  scheduleDayOfWeek: z.coerce.number().int().min(0).max(6),
+  scheduleDayOfMonth: z.coerce.number().int().min(1).max(28),
+  timezone: z.string().min(1),
 });
 
 function splitList(value: string): string[] {
@@ -49,12 +53,16 @@ export async function saveSettings(
     locations: formData.get("locations") ?? "",
     remotePreference: formData.get("remotePreference") ?? "no_preference",
     salaryMin: formData.get("salaryMin") ?? "",
+    yearsOfExperience: formData.get("yearsOfExperience") ?? "",
     industries: formData.get("industries") ?? "",
-    mustHaves: formData.get("mustHaves") ?? "",
-    dealbreakers: formData.get("dealbreakers") ?? "",
+    aboutYou: formData.get("aboutYou") ?? "",
     watchTargets: formData.get("watchTargets") ?? "",
     matchThreshold: formData.get("matchThreshold") ?? "60",
     emailFrequency: formData.get("emailFrequency") ?? "weekly",
+    scheduleHour: formData.get("scheduleHour") ?? "8",
+    scheduleDayOfWeek: formData.get("scheduleDayOfWeek") ?? "1",
+    scheduleDayOfMonth: formData.get("scheduleDayOfMonth") ?? "1",
+    timezone: formData.get("timezone") ?? "UTC",
   });
 
   if (!parsed.success) {
@@ -63,6 +71,9 @@ export async function saveSettings(
 
   const data = parsed.data;
   const salaryMin = data.salaryMin ? Number.parseInt(data.salaryMin, 10) : null;
+  const yearsOfExperience = data.yearsOfExperience
+    ? Number.parseInt(data.yearsOfExperience, 10)
+    : null;
 
   await db.transaction(async (tx) => {
     await tx
@@ -77,9 +88,9 @@ export async function saveSettings(
         locations: splitList(data.locations),
         remotePreference: data.remotePreference,
         salaryMin: Number.isFinite(salaryMin) ? salaryMin : null,
+        yearsOfExperience: Number.isFinite(yearsOfExperience) ? yearsOfExperience : null,
         industries: splitList(data.industries),
-        mustHaves: data.mustHaves,
-        dealbreakers: data.dealbreakers,
+        aboutYou: data.aboutYou,
         watchTargets: splitList(data.watchTargets),
         updatedAt: new Date(),
       })
@@ -90,6 +101,10 @@ export async function saveSettings(
       .set({
         matchThreshold: data.matchThreshold,
         emailFrequency: data.emailFrequency,
+        scheduleHour: data.scheduleHour,
+        scheduleDayOfWeek: data.scheduleDayOfWeek,
+        scheduleDayOfMonth: data.scheduleDayOfMonth,
+        timezone: data.timezone,
         updatedAt: new Date(),
       })
       .where(eq(userSettings.userId, user.id));

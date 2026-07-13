@@ -13,26 +13,35 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="flex items-center justify-between border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">Job Search Assistant</span>
-          <a href="/dashboard" className="text-sm text-gray-500 underline">
-            Dashboard
-          </a>
-          <a href="/dashboard/settings" className="text-sm text-gray-500 underline">
-            Settings
-          </a>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <span>{user?.email}</span>
-          <form action={signOut}>
-            <button type="submit" className="underline">
-              Sign out
-            </button>
-          </form>
+      <header className="border-b border-border bg-surface">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
+          <div className="flex items-center gap-6">
+            <a href="/dashboard" className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent font-display text-sm font-semibold text-white">
+                J
+              </span>
+              <span className="font-display text-sm font-semibold">Job Search Assistant</span>
+            </a>
+            <nav className="flex items-center gap-4 text-sm text-muted">
+              <a href="/dashboard" className="hover:text-ink">
+                Matches
+              </a>
+              <a href="/dashboard/settings" className="hover:text-ink">
+                Settings
+              </a>
+            </nav>
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted">
+            <span>{user?.email}</span>
+            <form action={signOut}>
+              <button type="submit" className="hover:text-ink">
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl p-6">{children}</main>
+      <main className="mx-auto max-w-3xl px-6 py-8">{children}</main>
     </div>
   );
 }

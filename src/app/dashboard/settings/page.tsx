@@ -44,19 +44,23 @@ export default async function SettingsPage() {
     locations: preferences?.locations ?? [],
     remotePreference: preferences?.remotePreference ?? "no_preference",
     salaryMin: preferences?.salaryMin ?? null,
+    yearsOfExperience: preferences?.yearsOfExperience ?? null,
     industries: preferences?.industries ?? [],
-    mustHaves: preferences?.mustHaves ?? "",
-    dealbreakers: preferences?.dealbreakers ?? "",
+    aboutYou: preferences?.aboutYou ?? "",
     watchTargets: preferences?.watchTargets ?? [],
     matchThreshold: settings?.matchThreshold ?? 60,
     emailFrequency: settings?.emailFrequency ?? "weekly",
+    scheduleHour: settings?.scheduleHour ?? 8,
+    scheduleDayOfWeek: settings?.scheduleDayOfWeek ?? 1,
+    scheduleDayOfMonth: settings?.scheduleDayOfMonth ?? 1,
+    timezone: settings?.timezone ?? "UTC",
   };
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">Your profile & preferences</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="font-display text-xl font-semibold">Your profile &amp; preferences</h1>
+        <p className="text-sm text-muted">
           This is what the job-matching agent uses. Update it any time.
         </p>
       </div>

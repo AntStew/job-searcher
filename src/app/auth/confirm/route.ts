@@ -5,12 +5,22 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/dashboard";
 
-  if (token_hash && type) {
-    const supabase = await createClient();
+  const supabase = await createClient();
+
+  // Supabase's email templates may link with either the PKCE `code` param
+  // or the older `token_hash`+`type` OTP params, depending on template
+  // version — handle both.
+  if (code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      redirect(next);
+    }
+  } else if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
     if (!error) {
       redirect(next);

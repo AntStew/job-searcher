@@ -1,0 +1,1 @@
+ALTER TABLE "user_settings" ADD COLUMN "run_started_at" timestamp with time zone;

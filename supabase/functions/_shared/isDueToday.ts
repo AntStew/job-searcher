@@ -1,5 +1,5 @@
-import type { userSettings } from "@/db/schema";
-import { getZonedParts } from "@/lib/timezone";
+import type { userSettings } from "./schema.ts";
+import { getZonedParts } from "./timezone.ts";
 
 type Settings = typeof userSettings.$inferSelect;
 
@@ -31,25 +31,4 @@ export function isDueToday(settings: Settings, now: Date = new Date()): boolean 
     (now.getTime() - settings.lastEmailSentAt.getTime()) / (1000 * 60 * 60);
 
   return hoursSinceLastSend >= MIN_GAP_HOURS[settings.emailFrequency];
-}
-
-/** The next time the cron will consider this user due, or null if paused. */
-export function nextDueDate(settings: Settings, now: Date = new Date()): Date | null {
-  if (settings.emailFrequency === "paused") return null;
-
-  // Walk forward hour by hour (bounded) until isDueToday would return true,
-  // without the min-gap-since-last-send guard so it reflects the schedule
-  // itself rather than "when we're allowed to send again".
-  const probe = { ...settings, lastEmailSentAt: null };
-  const maxHoursToCheck = 24 * 32;
-
-  for (let i = 0; i <= maxHoursToCheck; i++) {
-    const candidate = new Date(now.getTime() + i * 60 * 60 * 1000);
-    if (isDueToday(probe, candidate)) {
-      candidate.setUTCMinutes(0, 0, 0);
-      return candidate;
-    }
-  }
-
-  return null;
 }

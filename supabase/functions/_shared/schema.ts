@@ -1,3 +1,7 @@
+// Mirrors src/db/schema.ts. Kept as a separate copy because Supabase Edge
+// Functions (Deno) can't resolve the Next.js app's "@/*" path alias or
+// share a build with the Next.js app — each edge function is deployed as
+// its own isolated bundle. Keep this in sync if the Node-side schema changes.
 import {
   pgTable,
   uuid,
@@ -8,7 +12,7 @@ import {
   jsonb,
   unique,
   pgEnum,
-} from "drizzle-orm/pg-core";
+} from "npm:drizzle-orm/pg-core";
 
 export const remotePreferenceEnum = pgEnum("remote_preference", [
   "remote",
@@ -32,7 +36,6 @@ export const jobSourceEnum = pgEnum("job_source", [
   "web_search",
 ]);
 
-// Mirrors Supabase auth.users — id must match the Supabase auth user id.
 export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
   email: text("email").notNull().unique(),

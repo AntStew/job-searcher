@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { jobs } from "@/db/schema";
-import type { NormalizedJob } from "./types";
+import { and, eq } from "npm:drizzle-orm";
+import { db } from "./db.ts";
+import { jobs } from "./schema.ts";
+import type { NormalizedJob } from "./types.ts";
 
 /**
  * Upserts normalized listings into the shared jobs cache, deduping on

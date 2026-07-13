@@ -1,4 +1,4 @@
-import type { jobSourceEnum } from "@/db/schema";
+import type { jobSourceEnum } from "./schema.ts";
 
 export type JobSourceName = (typeof jobSourceEnum.enumValues)[number];
 
