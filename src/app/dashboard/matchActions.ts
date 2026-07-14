@@ -40,5 +40,6 @@ export async function setMatchStatus(matchId: string, status: ApplicationStatus)
     .where(and(eq(jobMatches.id, matchId), eq(jobMatches.userId, userId)));
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/tracker");
   return { ok: true as const };
 }

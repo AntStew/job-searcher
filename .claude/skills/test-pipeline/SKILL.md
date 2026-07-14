@@ -5,6 +5,10 @@ description: How to trigger and verify a real job-search run end-to-end — via 
 
 # Test the job-search pipeline
 
+## Zero-cost first pass: unit tests
+
+`npm run test` covers the pure logic (schedule matching, URL dedup normalization, prompt assembly, tokens, taunt selection) without touching the DB or the Anthropic API. Run it before any live test.
+
 ## Fastest: dashboard Run Now
 
 With `npm run dev` running, sign in and click **Run now** on the dashboard. This runs the full search → score → email path on the Vercel/Node side (`/api/pipeline/run-now`), ignoring the schedule. The summary line under the button reports found/scored/sent counts and surfaces any errors.
@@ -40,3 +44,4 @@ Note: `dotenv` v17 prints an ad line on load — ignore it, it's cosmetic.
 - `sent:false, reason:"no_matches"` is normal when nothing new cleared the threshold within the digest's time window (24h/7d/30d by frequency)
 - Digest emails land in **spam** on the Resend test domain — check there
 - Runs cost real Anthropic usage (Sonnet + up to 15 web searches per user) — don't loop-test carelessly
+- Failed runs write `user_settings.last_run_error` (visible on `/admin`) and do NOT update `last_run_at`, so a failed run never blocks a retry with the 24h cooldown

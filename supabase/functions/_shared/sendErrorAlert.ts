@@ -11,7 +11,7 @@ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
  * domain is verified.
  */
 export async function sendErrorAlert(userEmail: string, errorSummary: string) {
-  const from = Deno.env.get("EMAIL_FROM") ?? "Job Search Assistant <jobs@example.com>";
+  const from = Deno.env.get("EMAIL_FROM") ?? "Unemployment Final Boss <jobs@example.com>";
   const adminEmail = Deno.env.get("ADMIN_EMAIL");
 
   const recipients = new Set<string>([userEmail]);

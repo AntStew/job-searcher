@@ -16,6 +16,8 @@ Every changed file in `src/lib/…` that has a counterpart in `supabase/function
 - env access is `Deno.env.get("X")` not `process.env.X`
 - the digest email renders via `digestEmailHtml.ts` (template literal), not React Email
 
+Pure-logic mirrors with no imports at all (`taunts.ts`, `normalizeUrl.ts`, `digestWindow.ts`) are byte-identical — just `cp` them. The full mirrored-pair list lives in AGENTS.md.
+
 Fastest safe path for pure-logic files (no env/imports beyond schema): `cp` the src file over the mirror, then fix the import lines with a targeted edit. Diff the two afterwards to confirm only the known differences remain.
 
 ## 2. Schema changes (if any)
@@ -33,6 +35,7 @@ Before applying enum-narrowing or column-dropping migrations, check live data wo
 
 ```
 npx tsc --noEmit
+npm run test       # vitest unit tests (isDueToday, normalizeUrl, prompts, …)
 npm run build      # needs placeholder env vars if .env is incomplete
 ```
 

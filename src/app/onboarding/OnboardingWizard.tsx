@@ -151,9 +151,6 @@ export function OnboardingWizard() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent font-display text-lg font-semibold text-white">
-          J
-        </div>
         <h1 className="font-display text-xl font-semibold">Let&apos;s set up your job search</h1>
         <p className="text-sm text-muted">
           A few quick steps, then the assistant starts looking for jobs that fit you.
@@ -290,7 +287,7 @@ export function OnboardingWizard() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <label className={labelClass}>Minimum salary</label>
                 <input
@@ -373,7 +370,7 @@ export function OnboardingWizard() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-1">
                 <label className={labelClass}>Frequency</label>
                 <select

@@ -1,17 +1,11 @@
-import { and, desc, eq, gte, isNull, not } from "npm:drizzle-orm";
+import { and, desc, eq, gte, isNull, ne, not, or } from "npm:drizzle-orm";
 import { Resend } from "npm:resend";
 import { db } from "./db.ts";
 import { emailSends, jobMatches, jobs, userSettings, users } from "./schema.ts";
 import { renderDigestHtml, type DigestJob } from "./digestEmailHtml.ts";
+import { TAUNTS } from "./taunts.ts";
+import { MAX_JOBS_PER_DIGEST, WINDOW_HOURS } from "./digestWindow.ts";
 import { unsubscribeUrl } from "./unsubscribeToken.ts";
-
-const MAX_JOBS_PER_DIGEST = 15;
-
-const WINDOW_HOURS: Record<"daily" | "weekly" | "monthly", number> = {
-  daily: 24,
-  weekly: 7 * 24,
-  monthly: 30 * 24,
-};
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -56,6 +50,8 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
         eq(jobMatches.userId, userId),
         gte(jobMatches.score, settings.matchThreshold),
         not(jobMatches.dealbreakerHit),
+        // A thumbs-down ("Not interested") means never email it either.
+        or(isNull(jobMatches.feedback), ne(jobMatches.feedback, "disliked")),
         isNull(jobMatches.emailedAt),
         gte(jobs.fetchedAt, windowStart),
       ),
@@ -78,16 +74,19 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
     experienceRequired: job.experienceRequired,
   }));
 
+  const taunt = TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
+
   const html = renderDigestHtml(
     digestJobs,
     unsubscribeUrl(userId),
     `${Deno.env.get("APP_BASE_URL") ?? ""}/dashboard/settings`,
+    taunt,
   );
 
   const { data, error } = await resend.emails.send({
-    from: Deno.env.get("EMAIL_FROM") ?? "Job Search Assistant <jobs@example.com>",
+    from: Deno.env.get("EMAIL_FROM") ?? "Unemployment Final Boss <jobs@example.com>",
     to: user.email,
-    subject: `${digestJobs.length} new job match${digestJobs.length === 1 ? "" : "es"} for you`,
+    subject: `${digestJobs.length} new job match${digestJobs.length === 1 ? "" : "es"} — ${taunt}`,
     html,
   });
 

@@ -21,14 +21,12 @@ function formatDateTime(date: Date | null): string {
 export default async function AdminPage() {
   await requireAdmin();
 
-  const allUsers = await db.select().from(users);
-  const allSettings = await db.select().from(userSettings);
+  const [allUsers, allSettings, matchCounts] = await Promise.all([
+    db.select().from(users),
+    db.select().from(userSettings),
+    db.select({ userId: jobMatches.userId, count: count() }).from(jobMatches).groupBy(jobMatches.userId),
+  ]);
   const settingsByUserId = new Map(allSettings.map((s) => [s.userId, s]));
-
-  const matchCounts = await db
-    .select({ userId: jobMatches.userId, count: count() })
-    .from(jobMatches)
-    .groupBy(jobMatches.userId);
   const matchCountByUserId = new Map(matchCounts.map((row) => [row.userId, row.count]));
 
   const rows = allUsers.map((user) => {
@@ -84,6 +82,7 @@ export default async function AdminPage() {
               <th className="py-2 pr-3 font-medium">Last run</th>
               <th className="py-2 pr-3 font-medium">Next run</th>
               <th className="py-2 pr-3 font-medium">Est. cost</th>
+              <th className="py-2 pr-3 font-medium">Last error</th>
               <th className="py-2 pr-3 font-medium">Status</th>
               <th className="py-2 font-medium"></th>
             </tr>
@@ -96,6 +95,18 @@ export default async function AdminPage() {
                 <td className="py-2 pr-3">{formatDateTime(settings?.lastRunAt ?? null)}</td>
                 <td className="py-2 pr-3">{nextRunText}</td>
                 <td className="py-2 pr-3">${estimatedCost.toFixed(2)}</td>
+                <td className="py-2 pr-3">
+                  {settings?.lastRunError ? (
+                    <span
+                      title={settings.lastRunError}
+                      className="block max-w-[160px] truncate text-xs text-danger"
+                    >
+                      {settings.lastRunError}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted">—</span>
+                  )}
+                </td>
                 <td className="py-2 pr-3">
                   {settings?.adminLocked ? (
                     <span className="rounded-full bg-danger/10 px-2 py-1 text-xs font-medium text-danger">

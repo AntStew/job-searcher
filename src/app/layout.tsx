@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Job Search Assistant",
+  title: "Unemployment Final Boss",
   description: "Your resume, your preferences, matched against new jobs automatically.",
 };
 

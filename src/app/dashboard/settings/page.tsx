@@ -2,41 +2,36 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { jobPreferences, userProfiles, userSettings, users } from "@/db/schema";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
 import { SettingsForm, type SettingsFormInitialValues } from "./SettingsForm";
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Defensive: ensure rows exist even if the Supabase auth trigger hasn't
-  // been installed yet in this environment.
-  await db
-    .insert(users)
-    .values({ id: user.id, email: user.email ?? "" })
-    .onConflictDoNothing();
-  await db.insert(userProfiles).values({ userId: user.id }).onConflictDoNothing();
-  await db.insert(jobPreferences).values({ userId: user.id }).onConflictDoNothing();
-  await db.insert(userSettings).values({ userId: user.id }).onConflictDoNothing();
+  const selectAll = () =>
+    Promise.all([
+      db.select().from(userProfiles).where(eq(userProfiles.userId, user.id)),
+      db.select().from(jobPreferences).where(eq(jobPreferences.userId, user.id)),
+      db.select().from(userSettings).where(eq(userSettings.userId, user.id)),
+    ]);
 
-  const [profile] = await db
-    .select()
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, user.id));
-  const [preferences] = await db
-    .select()
-    .from(jobPreferences)
-    .where(eq(jobPreferences.userId, user.id));
-  const [settings] = await db
-    .select()
-    .from(userSettings)
-    .where(eq(userSettings.userId, user.id));
+  let [[profile], [preferences], [settings]] = await selectAll();
+
+  // Only true on someone's very first page view, before the Supabase auth
+  // trigger has created these rows — everyone else skips straight past this.
+  if (!profile || !preferences || !settings) {
+    await db.insert(users).values({ id: user.id, email: user.email ?? "" }).onConflictDoNothing();
+    await Promise.all([
+      db.insert(userProfiles).values({ userId: user.id }).onConflictDoNothing(),
+      db.insert(jobPreferences).values({ userId: user.id }).onConflictDoNothing(),
+      db.insert(userSettings).values({ userId: user.id }).onConflictDoNothing(),
+    ]);
+    [[profile], [preferences], [settings]] = await selectAll();
+  }
 
   const initial: SettingsFormInitialValues = {
     resumeText: profile?.resumeText ?? "",

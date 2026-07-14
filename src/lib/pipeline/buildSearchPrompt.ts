@@ -1,4 +1,5 @@
 import type { jobPreferences, userProfiles } from "@/db/schema";
+import { TAUNTS } from "@/lib/taunts";
 
 type Profile = typeof userProfiles.$inferSelect;
 type Preferences = typeof jobPreferences.$inferSelect;
@@ -24,7 +25,12 @@ export function buildSearchPrompt(
   const sections: string[] = [];
 
   sections.push(
-    "You are helping a real person search for a job. They may have little experience job-hunting, so write your final explanations in plain, encouraging, jargon-free language — the kind a friend would use, not a corporate recruiter.",
+    [
+      "You are helping a real person search for a job. Write like their funny, brutally honest friend texting them about a job listing — not a recruiter, not HR, not a corporate LinkedIn post. Casual, a little teasing, genuinely on their side.",
+      "Here's exactly how this person jokes and talks — match this voice (the slang, the bluntness, the ALL CAPS when it's warranted, the specific sense of humor) rather than a generic 'friendly' tone:",
+      TAUNTS.map((t) => `- "${t}"`).join("\n"),
+      "Keep it short (1-3 sentences), no corporate jargon ('synergy', 'dynamic environment', 'fast-paced team'), and never fake enthusiasm for a bad match — if it's mediocre, say so, and let the score reflect it. The humor is a bonus, the honesty about fit is the actual job.",
+    ].join("\n"),
   );
 
   sections.push(

@@ -1,7 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/confirm", "/auth/auth-code-error"];
+// /api/unsubscribe must stay public: it's opened from an email by recipients
+// who usually have no session, and it authenticates with its own HMAC token.
+const PUBLIC_PATHS = ["/login", "/auth/confirm", "/auth/auth-code-error", "/api/unsubscribe"];
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });

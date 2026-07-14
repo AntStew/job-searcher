@@ -30,10 +30,12 @@ const BORDER = "#e2e5ea";
 
 export function JobDigestEmail({
   jobsList,
+  taunt,
   unsubscribeUrl,
   settingsUrl,
 }: {
   jobsList: DigestJob[];
+  taunt?: string;
   unsubscribeUrl: string;
   settingsUrl: string;
 }) {
@@ -62,7 +64,7 @@ export function JobDigestEmail({
                     J
                   </td>
                   <td style={{ paddingLeft: "10px", color: INK, fontWeight: 600, fontSize: "16px" }}>
-                    Job Search Assistant
+                    Unemployment Final Boss
                   </td>
                 </tr>
               </tbody>
@@ -78,7 +80,7 @@ export function JobDigestEmail({
             }}
           >
             <Heading as="h2" style={{ margin: "0 0 4px", color: INK, fontSize: "20px" }}>
-              Your new matches
+              {taunt ?? "Your new matches"}
             </Heading>
             <Text style={{ margin: "0 0 8px", color: MUTED, fontSize: "14px" }}>
               {jobsList.length} job{jobsList.length === 1 ? "" : "s"} cleared your match threshold —

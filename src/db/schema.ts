@@ -89,6 +89,7 @@ export const userSettings = pgTable("user_settings", {
   scheduleDayOfMonth: integer("schedule_day_of_month").notNull().default(1),
   runStartedAt: timestamp("run_started_at", { withTimezone: true }),
   lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  lastRunError: text("last_run_error"),
   lastEmailSentAt: timestamp("last_email_sent_at", { withTimezone: true }),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   timezone: text("timezone").notNull().default("UTC"),

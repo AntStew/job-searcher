@@ -12,10 +12,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-1 text-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-lg font-display font-semibold text-white">
-          J
-        </div>
-        <h1 className="mt-2 font-display text-xl font-semibold">Job Search Assistant</h1>
+        <h1 className="font-display text-xl font-semibold">Unemployment Final Boss</h1>
         <p className="text-sm text-muted">
           Enter your email and we&apos;ll send a sign-in link — no password to remember.
         </p>

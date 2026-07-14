@@ -33,6 +33,7 @@ export function renderDigestHtml(
   jobsList: DigestJob[],
   unsubscribeUrl: string,
   settingsUrl: string,
+  taunt?: string,
 ): string {
   const cards = jobsList
     .map((job) => {
@@ -74,11 +75,11 @@ export function renderDigestHtml(
       <div style="padding:0 4px 16px;">
         <table cellpadding="0" cellspacing="0"><tbody><tr>
           <td style="background-color:${ACCENT};border-radius:10px;width:36px;height:36px;text-align:center;color:#ffffff;font-weight:700;font-size:18px;">J</td>
-          <td style="padding-left:10px;color:${INK};font-weight:600;font-size:16px;">Job Search Assistant</td>
+          <td style="padding-left:10px;color:${INK};font-weight:600;font-size:16px;">Unemployment Final Boss</td>
         </tr></tbody></table>
       </div>
       <div style="background-color:#ffffff;border-radius:14px;border:1px solid ${BORDER};padding:24px;">
-        <h2 style="margin:0 0 4px;color:${INK};font-size:20px;">Your new matches</h2>
+        <h2 style="margin:0 0 4px;color:${INK};font-size:20px;">${escapeHtml(taunt ?? "Your new matches")}</h2>
         <p style="margin:0 0 8px;color:${MUTED};font-size:14px;">${jobsList.length} job${jobsList.length === 1 ? "" : "s"} cleared your match threshold — best fits first.</p>
         ${cards}
       </div>

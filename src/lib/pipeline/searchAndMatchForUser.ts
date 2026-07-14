@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { jobMatches, jobPreferences, jobs, userProfiles, userSettings } from "@/db/schema";
 import { buildSearchPrompt } from "./buildSearchPrompt";
 import { upsertJobs } from "@/lib/jobSources/upsertJobs";
+import { normalizeUrl } from "@/lib/jobSources/normalizeUrl";
 import type { NormalizedJob } from "@/lib/jobSources/types";
 
 async function recordUsage(userId: string, usage: Anthropic.Usage) {
@@ -46,7 +47,8 @@ const SUBMIT_JOB_MATCHES_TOOL: Anthropic.Tool = {
             score: { type: "integer", minimum: 0, maximum: 100 },
             reasoning: {
               type: "string",
-              description: "1-3 plain-language sentences on why this is (or isn't) a good match.",
+              description:
+                "1-3 sentences, written like a blunt, funny friend texting them about this listing — casual, honest, a little teasing, zero corporate jargon. See system prompt for tone examples.",
             },
             matched_criteria: { type: "array", items: { type: "string" } },
             dealbreaker_hit: { type: "boolean" },
@@ -83,17 +85,6 @@ const matchSchema = z.object({
   dealbreaker_hit: z.boolean(),
   posted_at: z.string().nullable().optional(),
 });
-
-function normalizeUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    u.hash = "";
-    u.search = "";
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
 
 export type SearchAndMatchResult = {
   found: number;
@@ -145,7 +136,9 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
       model: "claude-sonnet-5",
       max_tokens: 12000,
       tools: [
-        { type: "web_search_20250305", name: "web_search", max_uses: 15 },
+        // The 20260209 variant filters results with server-side code before
+        // they hit the context window — better matches, fewer input tokens.
+        { type: "web_search_20260209", name: "web_search", max_uses: 15 },
         SUBMIT_JOB_MATCHES_TOOL,
       ],
       tool_choice: { type: "auto" },

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { userSettings } from "@/db/schema";
-import { markRunFinished, markRunStarted } from "@/lib/pipeline/runStatus";
+import { isRunInProgress, markRunFinished, markRunStarted } from "@/lib/pipeline/runStatus";
 import { searchAndMatchForUser } from "@/lib/pipeline/searchAndMatchForUser";
 import { sendDigestForUser } from "@/lib/email/sendDigest";
 import { createClient } from "@/lib/supabase/server";
@@ -36,7 +36,11 @@ export async function POST() {
     user.email?.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase();
 
   const [settings] = await db
-    .select({ adminLocked: userSettings.adminLocked, lastRunAt: userSettings.lastRunAt })
+    .select({
+      adminLocked: userSettings.adminLocked,
+      lastRunAt: userSettings.lastRunAt,
+      runStartedAt: userSettings.runStartedAt,
+    })
     .from(userSettings)
     .where(eq(userSettings.userId, user.id));
 
@@ -44,6 +48,16 @@ export async function POST() {
     return NextResponse.json(
       { error: "Your account has been paused by the admin." },
       { status: 403 },
+    );
+  }
+
+  // The dashboard button disables itself while a run is live, but a stale tab
+  // (or the scheduled run firing at the same moment) can still double-submit —
+  // and each run costs real Anthropic usage.
+  if (isRunInProgress(settings?.runStartedAt ?? null)) {
+    return NextResponse.json(
+      { error: "A search is already running for you — give it a minute." },
+      { status: 409 },
     );
   }
 
@@ -65,8 +79,14 @@ export async function POST() {
     const searchResult = await searchAndMatchForUser(user.id);
     const sendResult = await sendDigestForUser(user.id);
 
+    // A run that produced only errors doesn't count as the user's daily run.
+    await markRunFinished(
+      user.id,
+      searchResult.errors.length > 0 ? searchResult.errors.join("; ") : null,
+    );
     return NextResponse.json({ searchResult, sendResult });
-  } finally {
-    await markRunFinished(user.id);
+  } catch (err) {
+    await markRunFinished(user.id, err instanceof Error ? err.message : String(err));
+    throw err;
   }
 }

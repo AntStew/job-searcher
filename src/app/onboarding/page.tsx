@@ -2,26 +2,30 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { jobPreferences, userProfiles, userSettings, users } from "@/db/schema";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
 import { OnboardingWizard } from "./OnboardingWizard";
 
 export default async function OnboardingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect("/login");
   }
 
-  // Defensive: ensure rows exist even if the auth trigger hasn't run.
-  await db.insert(users).values({ id: user.id, email: user.email ?? "" }).onConflictDoNothing();
-  await db.insert(userProfiles).values({ userId: user.id }).onConflictDoNothing();
-  await db.insert(jobPreferences).values({ userId: user.id }).onConflictDoNothing();
-  await db.insert(userSettings).values({ userId: user.id }).onConflictDoNothing();
+  let [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, user.id));
 
-  const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, user.id));
+  // Only true on someone's very first page view, before the Supabase auth
+  // trigger has created these rows — everyone else skips straight past this.
+  if (!settings) {
+    await db.insert(users).values({ id: user.id, email: user.email ?? "" }).onConflictDoNothing();
+    await Promise.all([
+      db.insert(userProfiles).values({ userId: user.id }).onConflictDoNothing(),
+      db.insert(jobPreferences).values({ userId: user.id }).onConflictDoNothing(),
+      db.insert(userSettings).values({ userId: user.id }).onConflictDoNothing(),
+    ]);
+    [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, user.id));
+  }
+
   if (settings?.onboardedAt) {
     redirect("/dashboard");
   }
