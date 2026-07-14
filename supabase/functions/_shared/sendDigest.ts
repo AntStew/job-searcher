@@ -15,6 +15,13 @@ const WINDOW_HOURS: Record<"daily" | "weekly" | "monthly", number> = {
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+function formatSalary(min: number | null, max: number | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
+  if (min && max) return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
+  return fmt((min ?? max)!);
+}
+
 export type SendDigestResult =
   | { sent: false; reason: "no_matches" | "paused" | "user_not_found" }
   | { sent: true; jobCount: number };
@@ -67,9 +74,15 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
     url: job.url,
     score: match.score,
     reasoning: match.reasoning,
+    salaryText: formatSalary(job.salaryMin, job.salaryMax),
+    experienceRequired: job.experienceRequired,
   }));
 
-  const html = renderDigestHtml(digestJobs, unsubscribeUrl(userId));
+  const html = renderDigestHtml(
+    digestJobs,
+    unsubscribeUrl(userId),
+    `${Deno.env.get("APP_BASE_URL") ?? ""}/dashboard/settings`,
+  );
 
   const { data, error } = await resend.emails.send({
     from: Deno.env.get("EMAIL_FROM") ?? "Job Search Assistant <jobs@example.com>",

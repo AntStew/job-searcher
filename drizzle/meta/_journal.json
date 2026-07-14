@@ -43,6 +43,13 @@
       "when": 1783976822950,
       "tag": "0005_spotty_boom_boom",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783981493261,
+      "tag": "0006_crazy_blindfold",
+      "breakpoints": true
     }
   ]
 }

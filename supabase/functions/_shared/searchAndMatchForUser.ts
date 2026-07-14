@@ -107,19 +107,25 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     return { found: 0, upserted: 0, scored: 0, errors: ["No profile or preferences set yet"] };
   }
 
-  // Tell the agent which jobs this user already has, so it doesn't spend
-  // result slots resurfacing them (duplicates get dropped on insert anyway,
-  // which would silently shrink the digest).
+  // Give the agent this user's history: jobs already shown (so it doesn't
+  // waste result slots on duplicates — they get dropped on insert anyway)
+  // and thumbs-up/down reactions (so results drift toward their taste).
   const recentMatches = await db
-    .select({ title: jobs.title, company: jobs.company })
+    .select({ title: jobs.title, company: jobs.company, feedback: jobMatches.feedback })
     .from(jobMatches)
     .innerJoin(jobs, eq(jobMatches.jobId, jobs.id))
     .where(eq(jobMatches.userId, userId))
     .orderBy(desc(jobMatches.scoredAt))
-    .limit(40);
-  const knownJobs = recentMatches.map((row: { title: string; company: string }) => `${row.title} at ${row.company}`);
+    .limit(60);
+  type HistoryRow = { title: string; company: string; feedback: "liked" | "disliked" | null };
+  const asLine = (row: HistoryRow) => `${row.title} at ${row.company}`;
+  const history = {
+    known: recentMatches.slice(0, 40).map(asLine),
+    liked: recentMatches.filter((row: HistoryRow) => row.feedback === "liked").slice(0, 15).map(asLine),
+    disliked: recentMatches.filter((row: HistoryRow) => row.feedback === "disliked").slice(0, 15).map(asLine),
+  };
 
-  const prompt = buildSearchPrompt(profile, preferences, knownJobs);
+  const prompt = buildSearchPrompt(profile, preferences, history);
   const errors: string[] = [];
 
   let response;

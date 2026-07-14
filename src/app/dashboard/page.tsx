@@ -9,6 +9,7 @@ import { thresholdLabel } from "@/lib/matchThreshold";
 import { card } from "@/lib/ui";
 import { RunNowButton } from "./RunNowButton";
 import { MatchSortSelect } from "./MatchSortSelect";
+import { MatchRow } from "./MatchRow";
 
 const SORT_OPTIONS = {
   score: desc(jobMatches.score),
@@ -55,6 +56,10 @@ export default async function DashboardPage({
   }
 
   const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, user.id));
+
+  if (settings && !settings.onboardedAt) {
+    redirect("/onboarding");
+  }
 
   const allMatches = await db
     .select({ id: jobMatches.id })
@@ -132,7 +137,24 @@ export default async function DashboardPage({
         ) : (
           <ul className="mt-3 flex flex-col divide-y divide-border">
             {recentMatches.map(({ match, job }) => (
-              <MatchRow key={match.id} match={match} job={job} />
+              <MatchRow
+                key={match.id}
+                matchId={match.id}
+                title={job.title}
+                company={job.company}
+                url={job.url}
+                location={job.location}
+                salaryText={formatSalary(job.salaryMin, job.salaryMax)}
+                addedText={formatDate(job.fetchedAt)}
+                score={match.score}
+                reasoning={match.reasoning}
+                matchedCriteria={match.matchedCriteria}
+                experienceRequired={job.experienceRequired}
+                dealbreakerHit={match.dealbreakerHit}
+                emailed={match.emailedAt !== null}
+                initialFeedback={match.feedback}
+                initialStatus={match.applicationStatus}
+              />
             ))}
           </ul>
         )}
@@ -155,89 +177,4 @@ function formatSalary(min: number | null, max: number | null): string | null {
   const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
   if (min && max) return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
   return fmt((min ?? max)!);
-}
-
-type Match = typeof jobMatches.$inferSelect;
-type Job = typeof jobs.$inferSelect;
-
-function MatchRow({ match, job }: { match: Match; job: Job }) {
-  const salary = formatSalary(job.salaryMin, job.salaryMax);
-
-  return (
-    <li className="py-3">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
-          <div className="min-w-0">
-            <a
-              href={job.url}
-              target="_blank"
-              rel="noreferrer"
-              className="truncate text-sm font-medium text-ink hover:text-accent"
-            >
-              {job.title}
-            </a>
-            <p className="truncate text-xs text-muted">
-              {job.company}
-              {job.location ? ` · ${job.location}` : ""}
-              {salary ? ` · ${salary}` : ""}
-              {` · Added ${formatDate(job.fetchedAt)}`}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {match.dealbreakerHit && (
-              <span className="rounded-full bg-danger/10 px-2 py-1 text-xs font-medium text-danger">
-                Dealbreaker
-              </span>
-            )}
-            {match.emailedAt && (
-              <span
-                title={`Included in your ${formatDate(match.emailedAt)} email`}
-                className="rounded-full border border-border px-2 py-1 text-xs font-medium text-muted"
-              >
-                Sent
-              </span>
-            )}
-            <span
-              title="Match score out of 100"
-              className="flex flex-col items-center rounded-lg bg-accent-soft px-2.5 py-1 leading-none"
-            >
-              <span className="text-sm font-semibold text-ink">{match.score}</span>
-              <span className="text-[9px] uppercase tracking-wide text-muted">match</span>
-            </span>
-            <svg
-              viewBox="0 0 20 20"
-              className="h-4 w-4 text-muted transition-transform group-open:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.6}
-            >
-              <path d="M5.5 7.5L10 12l4.5-4.5" />
-            </svg>
-          </div>
-        </summary>
-
-        <div className="mt-3 flex flex-col gap-2 rounded-lg bg-bg p-3 text-sm">
-          <p className="text-ink">{match.reasoning}</p>
-          {job.experienceRequired && (
-            <p className="text-xs text-muted">
-              <span className="font-medium text-ink">Experience: </span>
-              {job.experienceRequired}
-            </p>
-          )}
-          {match.matchedCriteria.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {match.matchedCriteria.map((criterion) => (
-                <span
-                  key={criterion}
-                  className="rounded-full border border-border bg-surface px-2 py-0.5 text-xs text-muted"
-                >
-                  {criterion}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </details>
-    </li>
-  );
 }

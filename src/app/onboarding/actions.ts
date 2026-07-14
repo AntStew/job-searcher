@@ -1,15 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { userSettings } from "@/db/schema";
 import { persistSettings, type PersistSettingsResult } from "@/lib/persistSettings";
 import { createClient } from "@/lib/supabase/server";
 
-export type SaveSettingsResult = PersistSettingsResult;
-
-export async function saveSettings(
-  _prev: SaveSettingsResult | null,
-  formData: FormData,
-): Promise<SaveSettingsResult> {
+export async function completeOnboarding(formData: FormData): Promise<PersistSettingsResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,8 +17,12 @@ export async function saveSettings(
   }
 
   const result = await persistSettings(user.id, formData);
-  if (result.ok) {
-    revalidatePath("/dashboard/settings");
-  }
-  return result;
+  if (!result.ok) return result;
+
+  await db
+    .update(userSettings)
+    .set({ onboardedAt: new Date() })
+    .where(eq(userSettings.userId, user.id));
+
+  return { ok: true };
 }

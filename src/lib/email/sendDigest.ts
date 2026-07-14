@@ -16,6 +16,13 @@ const WINDOW_HOURS: Record<"daily" | "weekly" | "monthly", number> = {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function formatSalary(min: number | null, max: number | null): string | null {
+  if (!min && !max) return null;
+  const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
+  if (min && max) return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
+  return fmt((min ?? max)!);
+}
+
 export type SendDigestResult =
   | { sent: false; reason: "no_matches" | "paused" | "user_not_found" }
   | { sent: true; jobCount: number };
@@ -68,10 +75,16 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
     url: job.url,
     score: match.score,
     reasoning: match.reasoning,
+    salaryText: formatSalary(job.salaryMin, job.salaryMax),
+    experienceRequired: job.experienceRequired,
   }));
 
   const html = await render(
-    JobDigestEmail({ jobsList: digestJobs, unsubscribeUrl: unsubscribeUrl(userId) }),
+    JobDigestEmail({
+      jobsList: digestJobs,
+      unsubscribeUrl: unsubscribeUrl(userId),
+      settingsUrl: `${process.env.APP_BASE_URL ?? ""}/dashboard/settings`,
+    }),
   );
 
   const { data, error } = await resend.emails.send({

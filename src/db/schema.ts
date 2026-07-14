@@ -24,6 +24,17 @@ export const emailFrequencyEnum = pgEnum("email_frequency", [
   "paused",
 ]);
 
+export const matchFeedbackEnum = pgEnum("match_feedback", ["liked", "disliked"]);
+
+export const applicationStatusEnum = pgEnum("application_status", [
+  "none",
+  "interested",
+  "applied",
+  "interviewing",
+  "rejected",
+  "offer",
+]);
+
 export const jobSourceEnum = pgEnum("job_source", [
   "adzuna",
   "remoteok",
@@ -78,6 +89,7 @@ export const userSettings = pgTable("user_settings", {
   runStartedAt: timestamp("run_started_at", { withTimezone: true }),
   lastRunAt: timestamp("last_run_at", { withTimezone: true }),
   lastEmailSentAt: timestamp("last_email_sent_at", { withTimezone: true }),
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   timezone: text("timezone").notNull().default("UTC"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -118,6 +130,8 @@ export const jobMatches = pgTable(
     reasoning: text("reasoning").notNull().default(""),
     matchedCriteria: text("matched_criteria").array().notNull().default([]),
     dealbreakerHit: boolean("dealbreaker_hit").notNull().default(false),
+    feedback: matchFeedbackEnum("feedback"),
+    applicationStatus: applicationStatusEnum("application_status").notNull().default("none"),
     scoredAt: timestamp("scored_at", { withTimezone: true }).notNull().defaultNow(),
     emailedAt: timestamp("emailed_at", { withTimezone: true }),
   },
