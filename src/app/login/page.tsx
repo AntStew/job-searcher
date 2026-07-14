@@ -23,9 +23,13 @@ export default function LoginPage() {
 
       <div className={card}>
         {state?.ok ? (
-          <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">
-            Check your inbox for a sign-in link.
-          </p>
+          <div className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">
+            <p>Check your inbox for a sign-in link.</p>
+            <p className="mt-1 text-muted">
+              Don&apos;t see it? Check your <strong>spam or junk folder</strong> — it can take a
+              minute to arrive.
+            </p>
+          </div>
         ) : (
           <form action={formAction} className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">

@@ -437,7 +437,8 @@ export function OnboardingWizard() {
 
             <p className={hintClass}>
               Times are in your timezone ({timezone.replace(/_/g, " ")}). Change any of this later in
-              Settings.
+              Settings. Tip: your first digest may land in spam — check there and mark it &quot;not
+              spam&quot; so future ones land in your inbox.
             </p>
           </div>
         )}
