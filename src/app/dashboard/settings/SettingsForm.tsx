@@ -53,6 +53,10 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
   const [suggestingRoles, setSuggestingRoles] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [emailFrequency, setEmailFrequency] = useState(initial.emailFrequency);
+  const [scheduleHour, setScheduleHour] = useState(initial.scheduleHour);
+  const [scheduleDayOfWeek, setScheduleDayOfWeek] = useState(initial.scheduleDayOfWeek);
+  const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(initial.scheduleDayOfMonth);
+  const [timezone, setTimezone] = useState(initial.timezone);
 
   async function handleSuggestRoles() {
     setSuggestError(null);
@@ -358,7 +362,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
                 <select
                   id="scheduleHour"
                   name="scheduleHour"
-                  defaultValue={initial.scheduleHour}
+                  value={scheduleHour}
+                  onChange={(e) => setScheduleHour(Number(e.target.value))}
                   className={select}
                 >
                   {HOUR_OPTIONS.map((hour) => (
@@ -373,7 +378,13 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
                 <label htmlFor="timezone" className={labelClass}>
                   Timezone
                 </label>
-                <select id="timezone" name="timezone" defaultValue={initial.timezone} className={select}>
+                <select
+                  id="timezone"
+                  name="timezone"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className={select}
+                >
                   {COMMON_TIMEZONES.map((tz) => (
                     <option key={tz} value={tz}>
                       {tz.replace(/_/g, " ")}
@@ -391,7 +402,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
                 <select
                   id="scheduleDayOfWeek"
                   name="scheduleDayOfWeek"
-                  defaultValue={initial.scheduleDayOfWeek}
+                  value={scheduleDayOfWeek}
+                  onChange={(e) => setScheduleDayOfWeek(Number(e.target.value))}
                   className={select}
                 >
                   {WEEKDAY_OPTIONS.map((day) => (
@@ -411,7 +423,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
                 <select
                   id="scheduleDayOfMonth"
                   name="scheduleDayOfMonth"
-                  defaultValue={initial.scheduleDayOfMonth}
+                  value={scheduleDayOfMonth}
+                  onChange={(e) => setScheduleDayOfMonth(Number(e.target.value))}
                   className={select}
                 >
                   {DAY_OF_MONTH_OPTIONS.map((day) => (
@@ -428,23 +441,23 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
         {/* Keep these fields in the submitted form even when hidden, so pausing doesn't wipe a saved schedule. */}
         {emailFrequency === "paused" && (
           <>
-            <input type="hidden" name="scheduleHour" value={initial.scheduleHour} />
-            <input type="hidden" name="timezone" value={initial.timezone} />
-            <input type="hidden" name="scheduleDayOfWeek" value={initial.scheduleDayOfWeek} />
-            <input type="hidden" name="scheduleDayOfMonth" value={initial.scheduleDayOfMonth} />
+            <input type="hidden" name="scheduleHour" value={scheduleHour} />
+            <input type="hidden" name="timezone" value={timezone} />
+            <input type="hidden" name="scheduleDayOfWeek" value={scheduleDayOfWeek} />
+            <input type="hidden" name="scheduleDayOfMonth" value={scheduleDayOfMonth} />
           </>
         )}
         {emailFrequency === "daily" && (
           <>
-            <input type="hidden" name="scheduleDayOfWeek" value={initial.scheduleDayOfWeek} />
-            <input type="hidden" name="scheduleDayOfMonth" value={initial.scheduleDayOfMonth} />
+            <input type="hidden" name="scheduleDayOfWeek" value={scheduleDayOfWeek} />
+            <input type="hidden" name="scheduleDayOfMonth" value={scheduleDayOfMonth} />
           </>
         )}
         {emailFrequency === "weekly" && (
-          <input type="hidden" name="scheduleDayOfMonth" value={initial.scheduleDayOfMonth} />
+          <input type="hidden" name="scheduleDayOfMonth" value={scheduleDayOfMonth} />
         )}
         {emailFrequency === "monthly" && (
-          <input type="hidden" name="scheduleDayOfWeek" value={initial.scheduleDayOfWeek} />
+          <input type="hidden" name="scheduleDayOfWeek" value={scheduleDayOfWeek} />
         )}
       </section>
 
