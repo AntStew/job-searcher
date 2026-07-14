@@ -1,11 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
-import { jobMatches, jobPreferences, jobs, userProfiles } from "@/db/schema";
+import { jobMatches, jobPreferences, jobs, userProfiles, userSettings } from "@/db/schema";
 import { buildSearchPrompt } from "./buildSearchPrompt";
 import { upsertJobs } from "@/lib/jobSources/upsertJobs";
 import type { NormalizedJob } from "@/lib/jobSources/types";
+
+async function recordUsage(userId: string, usage: Anthropic.Usage) {
+  const webSearches = usage.server_tool_use?.web_search_requests ?? 0;
+  await db
+    .update(userSettings)
+    .set({
+      totalInputTokens: sql`${userSettings.totalInputTokens} + ${usage.input_tokens}`,
+      totalOutputTokens: sql`${userSettings.totalOutputTokens} + ${usage.output_tokens}`,
+      totalWebSearches: sql`${userSettings.totalWebSearches} + ${webSearches}`,
+    })
+    .where(eq(userSettings.userId, userId));
+}
 
 const anthropic = new Anthropic();
 
@@ -144,6 +156,8 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     console.error("[searchAndMatchForUser]", message);
     return { found: 0, upserted: 0, scored: 0, errors: [message] };
   }
+
+  await recordUsage(userId, response.usage);
 
   if (response.stop_reason === "max_tokens") {
     const message =

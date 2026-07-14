@@ -4,6 +4,7 @@ import {
   text,
   timestamp,
   integer,
+  bigint,
   boolean,
   jsonb,
   unique,
@@ -91,6 +92,10 @@ export const userSettings = pgTable("user_settings", {
   lastEmailSentAt: timestamp("last_email_sent_at", { withTimezone: true }),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
   timezone: text("timezone").notNull().default("UTC"),
+  totalInputTokens: bigint("total_input_tokens", { mode: "number" }).notNull().default(0),
+  totalOutputTokens: bigint("total_output_tokens", { mode: "number" }).notNull().default(0),
+  totalWebSearches: integer("total_web_searches").notNull().default(0),
+  adminLocked: boolean("admin_locked").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

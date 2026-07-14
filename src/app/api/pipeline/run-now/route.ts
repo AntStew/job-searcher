@@ -1,4 +1,7 @@
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { db } from "@/db";
+import { userSettings } from "@/db/schema";
 import { markRunFinished, markRunStarted } from "@/lib/pipeline/runStatus";
 import { searchAndMatchForUser } from "@/lib/pipeline/searchAndMatchForUser";
 import { sendDigestForUser } from "@/lib/email/sendDigest";
@@ -19,6 +22,18 @@ export async function POST() {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const [settings] = await db
+    .select({ adminLocked: userSettings.adminLocked })
+    .from(userSettings)
+    .where(eq(userSettings.userId, user.id));
+
+  if (settings?.adminLocked) {
+    return NextResponse.json(
+      { error: "Your account has been paused by the admin." },
+      { status: 403 },
+    );
   }
 
   await markRunStarted(user.id);

@@ -1,13 +1,25 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
-import { desc, eq } from "npm:drizzle-orm";
+import { desc, eq, sql } from "npm:drizzle-orm";
 import { z } from "npm:zod";
 import { db } from "./db.ts";
-import { jobMatches, jobPreferences, jobs, userProfiles } from "./schema.ts";
+import { jobMatches, jobPreferences, jobs, userProfiles, userSettings } from "./schema.ts";
 import { buildSearchPrompt } from "./buildSearchPrompt.ts";
 import { upsertJobs } from "./upsertJobs.ts";
 import type { NormalizedJob } from "./types.ts";
 
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
+
+async function recordUsage(userId: string, usage: Anthropic.Usage) {
+  const webSearches = usage.server_tool_use?.web_search_requests ?? 0;
+  await db
+    .update(userSettings)
+    .set({
+      totalInputTokens: sql`${userSettings.totalInputTokens} + ${usage.input_tokens}`,
+      totalOutputTokens: sql`${userSettings.totalOutputTokens} + ${usage.output_tokens}`,
+      totalWebSearches: sql`${userSettings.totalWebSearches} + ${webSearches}`,
+    })
+    .where(eq(userSettings.userId, userId));
+}
 
 const SUBMIT_JOB_MATCHES_TOOL: Anthropic.Tool = {
   name: "submit_job_matches",
@@ -145,6 +157,8 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     console.error("[searchAndMatchForUser]", message);
     return { found: 0, upserted: 0, scored: 0, errors: [message] };
   }
+
+  await recordUsage(userId, response.usage);
 
   if (response.stop_reason === "max_tokens") {
     const message =

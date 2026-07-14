@@ -78,7 +78,17 @@ export async function persistSettings(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
   }
 
+  const [currentSettings] = await db
+    .select({ adminLocked: userSettings.adminLocked })
+    .from(userSettings)
+    .where(eq(userSettings.userId, userId));
+
   const data = parsed.data;
+  // Server-side backstop: even if a request is crafted to bypass the
+  // disabled UI, a locked account can never re-enable its own schedule.
+  if (currentSettings?.adminLocked) {
+    data.emailFrequency = "paused";
+  }
   const salaryMin = data.salaryMin ? Number.parseInt(data.salaryMin, 10) : null;
   const yearsOfExperience = data.yearsOfExperience
     ? Number.parseInt(data.yearsOfExperience, 10)

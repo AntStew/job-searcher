@@ -64,7 +64,7 @@ export default async function SettingsPage() {
           This is what the job-matching agent uses. Update it any time.
         </p>
       </div>
-      <SettingsForm initial={initial} />
+      <SettingsForm initial={initial} adminLocked={settings?.adminLocked ?? false} />
     </div>
   );
 }

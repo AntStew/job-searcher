@@ -29,6 +29,11 @@ export default async function DashboardLayout({
               <a href="/dashboard/settings" className="hover:text-ink">
                 Settings
               </a>
+              {user?.email?.toLowerCase() === process.env.ADMIN_EMAIL?.toLowerCase() && (
+                <a href="/admin" className="hover:text-ink">
+                  Admin
+                </a>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm text-muted">

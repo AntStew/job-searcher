@@ -36,7 +36,13 @@ export type SettingsFormInitialValues = {
 
 const initialState: SaveSettingsResult | null = null;
 
-export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }) {
+export function SettingsForm({
+  initial,
+  adminLocked = false,
+}: {
+  initial: SettingsFormInitialValues;
+  adminLocked?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(saveSettings, initialState);
   const [threshold, setThreshold] = useState<number>(() =>
     THRESHOLD_PRESETS.reduce((closest, preset) =>
@@ -375,6 +381,13 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
           </p>
         </div>
 
+        {adminLocked && (
+          <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+            Your account has been paused by the admin. Your other preferences still save normally,
+            but the schedule is locked until it&apos;s turned back on for you.
+          </p>
+        )}
+
         <div className="flex flex-col gap-1">
           <label htmlFor="emailFrequency" className={labelClass}>
             Frequency
@@ -383,6 +396,7 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
             id="emailFrequency"
             name="emailFrequency"
             value={emailFrequency}
+            disabled={adminLocked}
             onChange={(e) => setEmailFrequency(e.target.value as typeof emailFrequency)}
             className={select}
           >

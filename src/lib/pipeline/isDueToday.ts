@@ -17,6 +17,7 @@ const MIN_GAP_HOURS: Record<Exclude<Settings["emailFrequency"], "paused">, numbe
  * hourly cron, so this needs to line up with exactly one hour per period.
  */
 export function isDueToday(settings: Settings, now: Date = new Date()): boolean {
+  if (settings.adminLocked) return false; // extra safety net alongside emailFrequency="paused"
   if (settings.emailFrequency === "paused") return false;
 
   const { hour, dayOfWeek, dayOfMonth } = getZonedParts(now, settings.timezone);
@@ -35,6 +36,7 @@ export function isDueToday(settings: Settings, now: Date = new Date()): boolean 
 
 /** The next time the cron will consider this user due, or null if paused. */
 export function nextDueDate(settings: Settings, now: Date = new Date()): Date | null {
+  if (settings.adminLocked) return null;
   if (settings.emailFrequency === "paused") return null;
 
   // Walk forward hour by hour (bounded) until isDueToday would return true,
