@@ -37,4 +37,14 @@ describe("getZonedParts", () => {
     const parts = getZonedParts(new Date("2026-07-14T00:10:00Z"), "UTC");
     expect(parts.hour).toBe(0);
   });
+
+  it("skips the nonexistent spring-forward hour (NY, 2026-03-08: 01:59 → 03:00)", () => {
+    expect(getZonedParts(new Date("2026-03-08T06:59:00Z"), "America/New_York").hour).toBe(1);
+    expect(getZonedParts(new Date("2026-03-08T07:00:00Z"), "America/New_York").hour).toBe(3);
+  });
+
+  it("repeats the fall-back hour (NY, 2026-11-01: 1am occurs twice)", () => {
+    expect(getZonedParts(new Date("2026-11-01T05:30:00Z"), "America/New_York").hour).toBe(1);
+    expect(getZonedParts(new Date("2026-11-01T06:30:00Z"), "America/New_York").hour).toBe(1);
+  });
 });

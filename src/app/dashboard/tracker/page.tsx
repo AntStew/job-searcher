@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/db";
 import { jobMatches, jobs } from "@/db/schema";
 import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
+import { formatDate, formatSalary } from "@/lib/format";
 import { card } from "@/lib/ui";
 import { MatchRow } from "../MatchRow";
 
@@ -15,17 +16,6 @@ const STATUS_SECTIONS = [
   { status: "interested", label: "Interested" },
   { status: "rejected", label: "Rejected" },
 ] as const;
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function formatSalary(min: number | null, max: number | null): string | null {
-  if (!min && !max) return null;
-  const fmt = (n: number) => `$${Math.round(n / 1000)}k`;
-  if (min && max) return min === max ? fmt(min) : `${fmt(min)} – ${fmt(max)}`;
-  return fmt((min ?? max)!);
-}
 
 /**
  * Every match the user has put a status on, grouped by where it is in the
@@ -56,18 +46,19 @@ export default async function TrackerPage() {
       <div>
         <h1 className="font-display text-xl font-semibold">Application tracker</h1>
         <p className="text-sm text-muted">
-          Everything you&apos;ve marked a status on, closest-to-hired first.
+          Every job you actually did something about, closest-to-hired first.
         </p>
       </div>
 
       {sections.length === 0 ? (
         <div className={card}>
           <p className="text-sm text-muted">
-            Nothing tracked yet. Set a status on a match (Interested, Applied, …) from the{" "}
+            The tracker is tracking NOTHING. Set a status on a match (Interested, Applied, …) from
+            the{" "}
             <Link href="/dashboard" className="text-accent underline underline-offset-2">
               matches list
             </Link>{" "}
-            and it&apos;ll show up here. Yes that means you have to actually apply to something.
+            and it shows up here. Yes that means actually applying to something.
           </p>
         </div>
       ) : (

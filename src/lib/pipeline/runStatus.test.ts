@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 // test never touch it.
 vi.mock("@/db", () => ({ db: {} }));
 
-import { isRunInProgress, STALE_RUN_MINUTES } from "./runStatus";
+import {
+  hoursUntilManualRunAllowed,
+  isRunInProgress,
+  MANUAL_RUN_COOLDOWN_HOURS,
+  STALE_RUN_MINUTES,
+} from "./runStatus";
 
 const NOW = new Date("2026-07-14T12:00:00Z");
 
@@ -25,5 +30,23 @@ describe("isRunInProgress", () => {
   it("treats a run older than the stale threshold as crashed", () => {
     expect(isRunInProgress(minutesAgo(STALE_RUN_MINUTES), NOW)).toBe(false);
     expect(isRunInProgress(minutesAgo(60), NOW)).toBe(false);
+  });
+});
+
+describe("hoursUntilManualRunAllowed", () => {
+  it("allows immediately when the user has never run manually", () => {
+    expect(hoursUntilManualRunAllowed(null, NOW)).toBe(0);
+  });
+
+  it("blocks inside the 12h cooldown with the remaining hours", () => {
+    const threeHoursAgo = new Date(NOW.getTime() - 3 * 60 * 60 * 1000);
+    expect(hoursUntilManualRunAllowed(threeHoursAgo, NOW)).toBeCloseTo(
+      MANUAL_RUN_COOLDOWN_HOURS - 3,
+    );
+  });
+
+  it("allows again once the cooldown has fully elapsed", () => {
+    const thirteenHoursAgo = new Date(NOW.getTime() - 13 * 60 * 60 * 1000);
+    expect(hoursUntilManualRunAllowed(thirteenHoursAgo, NOW)).toBe(0);
   });
 });

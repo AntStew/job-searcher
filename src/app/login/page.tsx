@@ -11,17 +11,20 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="font-display text-xl font-semibold">Unemployment Final Boss</h1>
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="text-4xl">💀</span>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight">
+          <span className="text-loot">UNEMPLOYMENT FINAL BOSS</span>
+        </h1>
         <p className="text-sm text-muted">
-          Enter your email and we&apos;ll send a sign-in link — no password to remember.
+          Drop your email, get a magic link. Passwords are for people with jobs.
         </p>
       </div>
 
       <div className={card}>
         {state?.ok ? (
           <div className="rounded-lg bg-accent-soft px-4 py-3 text-sm text-ink">
-            <p>Check your inbox for a sign-in link.</p>
+            <p>Link sent. Go check your inbox — it&apos;s the first step, you got this.</p>
             <p className="mt-1 text-muted">
               Don&apos;t see it? Check your <strong>spam or junk folder</strong> — it can take a
               minute to arrive.

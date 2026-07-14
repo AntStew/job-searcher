@@ -7,18 +7,23 @@ export async function markRunStarted(userId: string) {
 }
 
 /**
- * Pass `error: null` for a successful run. A failed run keeps the previous
- * lastRunAt, so a crash doesn't burn a non-admin user's one-run-per-day
- * allowance — they can retry right away. Kept in sync with
- * src/lib/pipeline/runStatus.ts.
+ * Scheduled and manual runs record success on separate columns: lastRunAt
+ * drives the schedule's slot cooldown, lastManualRunAt drives the manual
+ * cooldown — so a manual run can never suppress the scheduled digest and
+ * vice versa. Failed runs (error != null) set neither, so neither cooldown
+ * is burned by a crash; they record lastRunError for the admin page instead.
+ * Kept in sync with src/lib/pipeline/runStatus.ts.
  */
-export async function markRunFinished(userId: string, error: string | null = null) {
-  await db
-    .update(userSettings)
-    .set(
-      error === null
+export async function markRunFinished(
+  userId: string,
+  { scheduled, error = null }: { scheduled: boolean; error?: string | null },
+) {
+  const success =
+    error === null
+      ? scheduled
         ? { runStartedAt: null, lastRunAt: new Date(), lastRunError: null }
-        : { runStartedAt: null, lastRunError: error },
-    )
-    .where(eq(userSettings.userId, userId));
+        : { runStartedAt: null, lastManualRunAt: new Date(), lastRunError: null }
+      : { runStartedAt: null, lastRunError: error };
+
+  await db.update(userSettings).set(success).where(eq(userSettings.userId, userId));
 }

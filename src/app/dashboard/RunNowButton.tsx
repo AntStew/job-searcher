@@ -12,8 +12,8 @@ type RunResult = {
 };
 
 const REASON_TEXT: Record<string, string> = {
-  no_matches: "No jobs cleared your threshold this run.",
-  paused: "Email is paused — matches were still saved.",
+  no_matches: "Nothing cleared your bar this run. The bar stays UP.",
+  paused: "Emails are paused — matches still saved tho.",
   user_not_found: "Something went wrong finding your account.",
 };
 
@@ -48,18 +48,17 @@ export function RunNowButton({ serverRunning = false }: { serverRunning?: boolea
   return (
     <div className="flex flex-col gap-2">
       <button type="button" onClick={handleRun} disabled={busy} className={buttonPrimary}>
-        {busy ? "Searching…" : "Run now"}
+        {busy ? "Hunting…" : "Run now"}
       </button>
       {serverRunning && !running && (
-        <p className="text-xs text-muted">Already running elsewhere (e.g. the daily schedule) — hang tight.</p>
+        <p className="text-xs text-muted">Already hunting (probably the scheduled run) — hang tight.</p>
       )}
       {error && <p className="text-xs text-danger">{error}</p>}
       {result && (
         <p className="text-xs text-muted">
-          The agent found {result.searchResult.found} job{result.searchResult.found === 1 ? "" : "s"} worth
-          scoring.{" "}
+          The agent dug up {result.searchResult.found} job{result.searchResult.found === 1 ? "" : "s"}.{" "}
           {result.sendResult.sent
-            ? `Sent a digest with ${result.sendResult.jobCount} job${result.sendResult.jobCount === 1 ? "" : "s"}.`
+            ? `Sent ${result.sendResult.jobCount} to your inbox. Go look.`
             : REASON_TEXT[result.sendResult.reason]}
         </p>
       )}

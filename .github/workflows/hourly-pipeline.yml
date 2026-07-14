@@ -2,7 +2,10 @@ name: Hourly job search run
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    # Twice an hour at off-peak minutes: GitHub cron regularly skips or delays
+    # top-of-hour slots (:00 is heavily contended). isDueNow's catch-up window
+    # tolerates late triggers, and its slot cooldown makes extra fires no-ops.
+    - cron: "13,43 * * * *"
   workflow_dispatch: {}
 
 jobs:

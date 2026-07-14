@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Vendored skills live in .agents/skills; the .claude entries are local symlinks
+.claude/skills/supabase/
+.claude/skills/supabase-postgres-best-practices/

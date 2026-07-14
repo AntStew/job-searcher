@@ -179,5 +179,3 @@ export function JobDigestEmail({
     </Html>
   );
 }
-
-export default JobDigestEmail;

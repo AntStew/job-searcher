@@ -11,7 +11,7 @@ description: How to trigger and verify a real job-search run end-to-end — via 
 
 ## Fastest: dashboard Run Now
 
-With `npm run dev` running, sign in and click **Run now** on the dashboard. This runs the full search → score → email path on the Vercel/Node side (`/api/pipeline/run-now`), ignoring the schedule. The summary line under the button reports found/scored/sent counts and surfaces any errors.
+With `npm run dev` running, sign in and click **Run now** on the dashboard. This runs the full search → score → email path on the Vercel/Node side (`/api/pipeline/run-now`), ignoring the schedule. The summary line under the button reports found/scored/sent counts and surfaces any errors. Manual runs are fully independent of the schedule (they set `last_manual_run_at`, never `last_run_at`) and non-admins get one per 12h; the admin account is exempt.
 
 ## Scheduled path: edge function
 
@@ -19,13 +19,13 @@ With `npm run dev` running, sign in and click **Run now** on the dashboard. This
 curl.exe -s -X POST "https://crfmqodlqxxpjseyyxgi.supabase.co/functions/v1/run-scheduled-pipeline" -H "Authorization: Bearer <EDGE_FUNCTION_SECRET from .env>"
 ```
 
-This only runs for users whose scheduled hour matches **right now** in their timezone. Two guards will make it report `usersDue: 0`:
+This runs for users whose scheduled slot started within the last 3 hours (`CATCH_UP_HOURS` in `schedule.ts`) in their timezone. Two guards will make it report `usersDue: 0`:
 
-1. **Schedule mismatch** — user's `schedule_hour`/day (in their timezone) isn't the current hour. Fix: set their schedule to the current hour in Settings, or watch GitHub Actions (`Actions → Hourly job search run → Run workflow`) at the right time.
-2. **Min-gap guard** — an email was sent within the last 20h (daily) / 6d (weekly) / 27d (monthly). Clear it for testing:
+1. **Slot mismatch** — the user's `schedule_hour`/day (in their timezone) isn't within the last 3 hours. Fix: set their schedule to the current hour in Settings, or trigger via GitHub (`Actions → Hourly job search run → Run workflow`).
+2. **Slot cooldown** — a successful scheduled run happened within the last 4h (`SLOT_COOLDOWN_HOURS`, keyed on `last_run_at`; manual runs don't count). Clear it for testing:
 
 ```
-node -e "require('dotenv').config();const p=require('postgres');const s=p(process.env.DATABASE_URL,{prepare:false});s\`update user_settings set last_email_sent_at=null\`.then(r=>{console.log('cleared',r.count);process.exit(0)})"
+node -e "require('dotenv').config();const p=require('postgres');const s=p(process.env.DATABASE_URL,{prepare:false});s\`update user_settings set last_run_at=null\`.then(r=>{console.log('cleared',r.count);process.exit(0)})"
 ```
 
 ## Inspecting results

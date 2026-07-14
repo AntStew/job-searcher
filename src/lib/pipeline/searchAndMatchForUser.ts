@@ -70,7 +70,7 @@ const SUBMIT_JOB_MATCHES_TOOL: Anthropic.Tool = {
   },
 };
 
-const matchSchema = z.object({
+export const matchSchema = z.object({
   title: z.string(),
   company: z.string(),
   url: z.string(),

@@ -23,7 +23,6 @@ export const TAUNT_EMOJIS = ["💀", "😭", "🔥", "📉", "🫠", "🚨", "�
 
 export type TauntStats = {
   totalMatches: number;
-  readyToSend: number;
   /** Matches marked applied, interviewing, or offer. */
   appliedCount: number;
   /** Matches scored in the last 7 days. */
@@ -42,11 +41,6 @@ export function pickTaunt(stats: TauntStats | null, random: () => number = Math.
     if (stats.totalMatches > 0 && stats.appliedCount === 0) {
       pool.push(
         `${stats.totalMatches} match${stats.totalMatches === 1 ? "" : "es"} found for u. applications sent: ZERO. get to it`,
-      );
-    }
-    if (stats.readyToSend > 0) {
-      pool.push(
-        `${stats.readyToSend} job${stats.readyToSend === 1 ? "" : "s"} queued for your inbox and ur just... sitting there`,
       );
     }
     if (stats.newThisWeek > 0) {

@@ -151,9 +151,12 @@ export function OnboardingWizard() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="font-display text-xl font-semibold">Let&apos;s set up your job search</h1>
+        <h1 className="font-display text-xl font-bold">
+          <span className="text-loot">Set up your job hunt</span>
+        </h1>
         <p className="text-sm text-muted">
-          A few quick steps, then the assistant starts looking for jobs that fit you.
+          A few quick steps, then the agent starts hunting jobs that fit you. Just do a few it
+          wont kill you.
         </p>
       </div>
 

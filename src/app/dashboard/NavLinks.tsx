@@ -28,7 +28,7 @@ export function NavLinks({ isAdmin }: { isAdmin: boolean }) {
           >
             {link.label}
             <span
-              className={`absolute inset-x-0 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-ink transition-transform duration-300 ease-out ${
+              className={`absolute inset-x-0 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-accent transition-transform duration-300 ease-out ${
                 active ? "scale-x-100" : "group-hover:scale-x-100"
               }`}
             />

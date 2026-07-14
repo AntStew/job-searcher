@@ -64,6 +64,13 @@
       "when": 1784028778058,
       "tag": "0008_ordinary_iron_fist",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784067299770,
+      "tag": "0009_classy_iron_lad",
+      "breakpoints": true
     }
   ]
 }

@@ -2,21 +2,12 @@ import { count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { jobMatches, userSettings, users } from "@/db/schema";
 import { requireAdmin } from "@/lib/requireAdmin";
-import { nextDueDate } from "@/lib/pipeline/isDueToday";
+import { nextDueDate } from "@/lib/pipeline/schedule";
 import { estimateCostUsd } from "@/lib/pipeline/anthropicPricing";
+import { formatDateTime } from "@/lib/format";
 import { card } from "@/lib/ui";
 import { InviteForm } from "./InviteForm";
 import { LockButton } from "./LockButton";
-
-function formatDateTime(date: Date | null): string {
-  if (!date) return "Never yet";
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 export default async function AdminPage() {
   await requireAdmin();

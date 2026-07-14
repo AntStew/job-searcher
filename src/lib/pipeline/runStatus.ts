@@ -5,10 +5,23 @@ import { userSettings } from "@/db/schema";
 /** A run stuck "in progress" longer than this is treated as crashed, not running. */
 export const STALE_RUN_MINUTES = 10;
 
+/** Non-admins get one manual "Run now" per this window, tracked separately from the schedule. */
+export const MANUAL_RUN_COOLDOWN_HOURS = 12;
+
 export function isRunInProgress(runStartedAt: Date | null, now: Date = new Date()): boolean {
   if (!runStartedAt) return false;
   const minutesElapsed = (now.getTime() - runStartedAt.getTime()) / (1000 * 60);
   return minutesElapsed < STALE_RUN_MINUTES;
+}
+
+/** Hours until another manual run is allowed; 0 means allowed now. */
+export function hoursUntilManualRunAllowed(
+  lastManualRunAt: Date | null,
+  now: Date = new Date(),
+): number {
+  if (!lastManualRunAt) return 0;
+  const hoursElapsed = (now.getTime() - lastManualRunAt.getTime()) / (1000 * 60 * 60);
+  return Math.max(0, MANUAL_RUN_COOLDOWN_HOURS - hoursElapsed);
 }
 
 export async function markRunStarted(userId: string) {
@@ -16,17 +29,22 @@ export async function markRunStarted(userId: string) {
 }
 
 /**
- * Pass `error: null` for a successful run. A failed run keeps the previous
- * lastRunAt, so a crash doesn't burn a non-admin user's one-run-per-day
- * allowance — they can retry right away.
+ * Scheduled and manual runs record success on separate columns: lastRunAt
+ * drives the schedule's slot cooldown, lastManualRunAt drives the manual
+ * cooldown — so a manual run can never suppress the scheduled digest and
+ * vice versa. Failed runs (error != null) set neither, so neither cooldown
+ * is burned by a crash; they record lastRunError for the admin page instead.
  */
-export async function markRunFinished(userId: string, error: string | null = null) {
-  await db
-    .update(userSettings)
-    .set(
-      error === null
+export async function markRunFinished(
+  userId: string,
+  { scheduled, error = null }: { scheduled: boolean; error?: string | null },
+) {
+  const success =
+    error === null
+      ? scheduled
         ? { runStartedAt: null, lastRunAt: new Date(), lastRunError: null }
-        : { runStartedAt: null, lastRunError: error },
-    )
-    .where(eq(userSettings.userId, userId));
+        : { runStartedAt: null, lastManualRunAt: new Date(), lastRunError: null }
+      : { runStartedAt: null, lastRunError: error };
+
+  await db.update(userSettings).set(success).where(eq(userSettings.userId, userId));
 }

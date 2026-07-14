@@ -1,15 +1,21 @@
 @import "tailwindcss";
 
+/*
+ * Unemployment Final Boss — "boss fight" theme.
+ * Arena-dark plum background, legendary-loot gold accent, boss-HP pink for
+ * danger. Match scores render as loot-rarity tiers in MatchRow (gold /
+ * purple / blue). Keep contrast high: the audience reads this at 7am.
+ */
 :root {
-  --bg: #f5f6f8;
-  --surface: #ffffff;
-  --ink: #171a1c;
-  --muted: #667085;
-  --border: #e2e5ea;
-  --accent: #0f8a7a;
-  --accent-hover: #0c6f62;
-  --accent-soft: #e6f5f2;
-  --danger: #d64545;
+  --bg: #120e17; /* arena black (plum-tinted, not pure black) */
+  --surface: #1b1523; /* card plum */
+  --ink: #f4f0fa; /* bone white */
+  --muted: #a396b8; /* faded sigil */
+  --border: #322947; /* rune border */
+  --accent: #f0b429; /* legendary gold */
+  --accent-hover: #ffc94d;
+  --accent-soft: rgba(240, 180, 41, 0.12);
+  --danger: #ff5d73; /* boss HP */
 }
 
 @theme inline {
@@ -29,6 +35,7 @@
 
 html {
   background: var(--bg);
+  color-scheme: dark;
 }
 
 body {
@@ -55,7 +62,7 @@ button {
 select {
   appearance: none;
   background-color: var(--surface);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23667085' stroke-width='1.6'%3E%3Cpath d='M5.5 7.5L10 12l4.5-4.5'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23a396b8' stroke-width='1.6'%3E%3Cpath d='M5.5 7.5L10 12l4.5-4.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;
@@ -63,8 +70,16 @@ select {
 }
 
 ::selection {
-  background: var(--accent-soft);
+  background: rgba(240, 180, 41, 0.35);
   color: var(--ink);
+}
+
+/* The signature: taunts and headlines get the loot gradient. */
+.text-loot {
+  background: linear-gradient(100deg, #f0b429 0%, #ff8a5c 55%, #e94f8a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 @keyframes indeterminate {

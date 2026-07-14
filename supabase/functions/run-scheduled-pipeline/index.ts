@@ -1,7 +1,7 @@
 import { eq } from "npm:drizzle-orm";
 import { db } from "../_shared/db.ts";
 import { users, userSettings } from "../_shared/schema.ts";
-import { isDueToday } from "../_shared/isDueToday.ts";
+import { isDueNow } from "../_shared/schedule.ts";
 import { markRunFinished, markRunStarted } from "../_shared/runStatus.ts";
 import { searchAndMatchForUser } from "../_shared/searchAndMatchForUser.ts";
 import { sendDigestForUser } from "../_shared/sendDigest.ts";
@@ -30,7 +30,7 @@ async function runForUser(userId: string): Promise<Record<string, unknown>> {
     errorSummary = error instanceof Error ? error.message : String(error);
     result = { error: errorSummary };
   }
-  await markRunFinished(userId, errorSummary);
+  await markRunFinished(userId, { scheduled: true, error: errorSummary });
 
   if (errorSummary) {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
   }
 
   const allSettings = await db.select().from(userSettings);
-  const dueSettings = allSettings.filter((settings) => isDueToday(settings));
+  const dueSettings = allSettings.filter((settings) => isDueNow(settings));
 
   // Each user's agent run can take minutes; running them sequentially risks
   // the edge function's wall-clock limit cutting off the tail of the list

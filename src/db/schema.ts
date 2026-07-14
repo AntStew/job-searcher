@@ -88,7 +88,10 @@ export const userSettings = pgTable("user_settings", {
   scheduleDayOfWeek: integer("schedule_day_of_week").notNull().default(1),
   scheduleDayOfMonth: integer("schedule_day_of_month").notNull().default(1),
   runStartedAt: timestamp("run_started_at", { withTimezone: true }),
+  /** Last successful SCHEDULED run — drives the slot cooldown. Manual runs never touch this. */
   lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  /** Last successful manual "Run now" — drives the 12h manual cooldown only. */
+  lastManualRunAt: timestamp("last_manual_run_at", { withTimezone: true }),
   lastRunError: text("last_run_error"),
   lastEmailSentAt: timestamp("last_email_sent_at", { withTimezone: true }),
   onboardedAt: timestamp("onboarded_at", { withTimezone: true }),

@@ -3,7 +3,6 @@ import { pickTaunt, TAUNTS, type TauntStats } from "./taunts";
 
 const zeroStats: TauntStats = {
   totalMatches: 0,
-  readyToSend: 0,
   appliedCount: 0,
   newThisWeek: 0,
 };
@@ -28,18 +27,13 @@ describe("pickTaunt", () => {
     expect(taunt).toContain("1 match found");
   });
 
-  it("mentions jobs queued for the inbox", () => {
-    const taunt = pickTaunt({ ...zeroStats, readyToSend: 3 }, () => 0);
-    expect(taunt).toContain("3 jobs queued");
-  });
-
   it("acknowledges applications, then demands more", () => {
     const taunt = pickTaunt({ ...zeroStats, appliedCount: 2 }, () => 0);
     expect(taunt).toContain("2 applications in");
   });
 
   it("never returns an empty string, whatever the random draw", () => {
-    const stats: TauntStats = { totalMatches: 5, readyToSend: 2, appliedCount: 1, newThisWeek: 4 };
+    const stats: TauntStats = { totalMatches: 5, appliedCount: 1, newThisWeek: 4 };
     for (const r of [0, 0.25, 0.5, 0.75, 0.999]) {
       expect(pickTaunt(stats, () => r).length).toBeGreaterThan(0);
       expect(pickTaunt(null, () => r).length).toBeGreaterThan(0);

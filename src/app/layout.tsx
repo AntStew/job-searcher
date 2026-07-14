@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { Sora, Inter, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const display = Sora({
+const display = Bricolage_Grotesque({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["500", "600", "700", "800"],
 });
 
 const body = Inter({
@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Unemployment Final Boss",
-  description: "Your resume, your preferences, matched against new jobs automatically.",
+  description: "The app that roasts you into employment. An AI agent hunts real jobs that fit your resume — you just have to actually apply.",
 };
 
 export default function RootLayout({
