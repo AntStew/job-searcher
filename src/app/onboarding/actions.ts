@@ -24,5 +24,5 @@ export async function completeOnboarding(formData: FormData): Promise<PersistSet
     .set({ onboardedAt: new Date() })
     .where(eq(userSettings.userId, user.id));
 
-  return { ok: true };
+  return result;
 }

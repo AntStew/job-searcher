@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { saveSettings, type SaveSettingsResult } from "./actions";
 import { buttonPrimary, buttonSecondary, card, hint as hintClass, input, label as labelClass, linkButton, select, textarea } from "@/lib/ui";
 import { THRESHOLD_PRESETS } from "@/lib/matchThreshold";
@@ -38,7 +38,7 @@ const initialState: SaveSettingsResult | null = null;
 
 export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialState);
-  const [threshold, setThreshold] = useState(() =>
+  const [threshold, setThreshold] = useState<number>(() =>
     THRESHOLD_PRESETS.reduce((closest, preset) =>
       Math.abs(preset.value - initial.matchThreshold) < Math.abs(closest.value - initial.matchThreshold)
         ? preset
@@ -57,6 +57,40 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
   const [scheduleDayOfWeek, setScheduleDayOfWeek] = useState(initial.scheduleDayOfWeek);
   const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(initial.scheduleDayOfMonth);
   const [timezone, setTimezone] = useState(initial.timezone);
+  const [locations, setLocations] = useState(initial.locations.join(", "));
+  const [remotePreference, setRemotePreference] = useState(initial.remotePreference);
+  const [salaryMin, setSalaryMin] = useState(initial.salaryMin?.toString() ?? "");
+  const [yearsOfExperience, setYearsOfExperience] = useState(
+    initial.yearsOfExperience?.toString() ?? "",
+  );
+  const [industries, setIndustries] = useState(initial.industries.join(", "));
+  const [aboutYou, setAboutYou] = useState(initial.aboutYou);
+  const [watchTargets, setWatchTargets] = useState(initial.watchTargets.join(", "));
+
+  // The page's server-rendered `initial` prop can lag behind what we just
+  // saved (Next.js doesn't guarantee the post-action re-render reflects the
+  // write immediately). Rather than depend on that timing, treat the action's
+  // own return value as truth and resync every field from it directly.
+  useEffect(() => {
+    if (!state?.ok) return;
+    const saved = state.saved;
+    setResumeText(saved.resumeText);
+    setDesiredRoles(saved.desiredRoles.join(", "));
+    setLocations(saved.locations.join(", "));
+    setRemotePreference(saved.remotePreference);
+    setSalaryMin(saved.salaryMin?.toString() ?? "");
+    setYearsOfExperience(saved.yearsOfExperience?.toString() ?? "");
+    setIndustries(saved.industries.join(", "));
+    setAboutYou(saved.aboutYou);
+    setWatchTargets(saved.watchTargets.join(", "));
+    setThreshold(saved.matchThreshold);
+    setEmailFrequency(saved.emailFrequency);
+    setScheduleHour(saved.scheduleHour);
+    setScheduleDayOfWeek(saved.scheduleDayOfWeek);
+    setScheduleDayOfMonth(saved.scheduleDayOfMonth);
+    setTimezone(saved.timezone);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   async function handleSuggestRoles() {
     setSuggestError(null);
@@ -186,7 +220,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
         <textarea
           id="aboutYou"
           name="aboutYou"
-          defaultValue={initial.aboutYou}
+          value={aboutYou}
+          onChange={(e) => setAboutYou(e.target.value)}
           rows={4}
           placeholder="e.g. I've spent the last 2 years doing customer support and want to move into a more technical role. I need fully remote work and won't consider anything with cold-calling."
           className={textarea}
@@ -227,7 +262,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
           name="locations"
           label="Locations"
           hint="Comma-separated, e.g. Austin TX, Remote"
-          defaultValue={initial.locations.join(", ")}
+          value={locations}
+          onChange={setLocations}
         />
 
         <div className="flex flex-col gap-1">
@@ -237,7 +273,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
           <select
             id="remotePreference"
             name="remotePreference"
-            defaultValue={initial.remotePreference}
+            value={remotePreference}
+            onChange={(e) => setRemotePreference(e.target.value as typeof remotePreference)}
             className={select}
           >
             <option value="no_preference">No preference</option>
@@ -256,7 +293,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
             name="salaryMin"
             type="number"
             inputMode="numeric"
-            defaultValue={initial.salaryMin ?? ""}
+            value={salaryMin}
+            onChange={(e) => setSalaryMin(e.target.value)}
             placeholder="e.g. 90000"
             className={input}
           />
@@ -273,7 +311,8 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
             type="number"
             inputMode="numeric"
             min={0}
-            defaultValue={initial.yearsOfExperience ?? ""}
+            value={yearsOfExperience}
+            onChange={(e) => setYearsOfExperience(e.target.value)}
             placeholder="e.g. 3"
             className={input}
           />
@@ -283,14 +322,16 @@ export function SettingsForm({ initial }: { initial: SettingsFormInitialValues }
           name="industries"
           label="Industries"
           hint="Comma-separated, optional"
-          defaultValue={initial.industries.join(", ")}
+          value={industries}
+          onChange={setIndustries}
         />
 
         <Field
           name="watchTargets"
           label="Companies to watch (optional)"
           hint="Comma-separated company names — the search agent will specifically check these as part of its search"
-          defaultValue={initial.watchTargets.join(", ")}
+          value={watchTargets}
+          onChange={setWatchTargets}
         />
       </section>
 
@@ -476,12 +517,14 @@ function Field({
   name,
   label,
   hint,
-  defaultValue,
+  value,
+  onChange,
 }: {
   name: string;
   label: string;
   hint?: string;
-  defaultValue: string;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -489,7 +532,14 @@ function Field({
         {label}
       </label>
       {hint && <p className={hintClass}>{hint}</p>}
-      <input id={name} name={name} type="text" defaultValue={defaultValue} className={input} />
+      <input
+        id={name}
+        name={name}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={input}
+      />
     </div>
   );
 }

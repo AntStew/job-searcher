@@ -30,7 +30,27 @@ function splitList(value: string): string[] {
     .filter(Boolean);
 }
 
-export type PersistSettingsResult = { ok: true } | { ok: false; error: string };
+export type SavedSettings = {
+  resumeText: string;
+  desiredRoles: string[];
+  locations: string[];
+  remotePreference: "remote" | "hybrid" | "onsite" | "no_preference";
+  salaryMin: number | null;
+  yearsOfExperience: number | null;
+  industries: string[];
+  aboutYou: string;
+  watchTargets: string[];
+  matchThreshold: number;
+  emailFrequency: "daily" | "weekly" | "monthly" | "paused";
+  scheduleHour: number;
+  scheduleDayOfWeek: number;
+  scheduleDayOfMonth: number;
+  timezone: string;
+};
+
+export type PersistSettingsResult =
+  | { ok: true; saved: SavedSettings }
+  | { ok: false; error: string };
 
 export async function persistSettings(
   userId: string,
@@ -63,6 +83,12 @@ export async function persistSettings(
   const yearsOfExperience = data.yearsOfExperience
     ? Number.parseInt(data.yearsOfExperience, 10)
     : null;
+  const desiredRoles = splitList(data.desiredRoles);
+  const locations = splitList(data.locations);
+  const industries = splitList(data.industries);
+  const watchTargets = splitList(data.watchTargets);
+  const finalSalaryMin = Number.isFinite(salaryMin) ? salaryMin : null;
+  const finalYearsOfExperience = Number.isFinite(yearsOfExperience) ? yearsOfExperience : null;
 
   await db.transaction(async (tx) => {
     await tx
@@ -73,14 +99,14 @@ export async function persistSettings(
     await tx
       .update(jobPreferences)
       .set({
-        desiredRoles: splitList(data.desiredRoles),
-        locations: splitList(data.locations),
+        desiredRoles,
+        locations,
         remotePreference: data.remotePreference,
-        salaryMin: Number.isFinite(salaryMin) ? salaryMin : null,
-        yearsOfExperience: Number.isFinite(yearsOfExperience) ? yearsOfExperience : null,
-        industries: splitList(data.industries),
+        salaryMin: finalSalaryMin,
+        yearsOfExperience: finalYearsOfExperience,
+        industries,
         aboutYou: data.aboutYou,
-        watchTargets: splitList(data.watchTargets),
+        watchTargets,
         updatedAt: new Date(),
       })
       .where(eq(jobPreferences.userId, userId));
@@ -99,5 +125,24 @@ export async function persistSettings(
       .where(eq(userSettings.userId, userId));
   });
 
-  return { ok: true };
+  return {
+    ok: true,
+    saved: {
+      resumeText: data.resumeText,
+      desiredRoles,
+      locations,
+      remotePreference: data.remotePreference,
+      salaryMin: finalSalaryMin,
+      yearsOfExperience: finalYearsOfExperience,
+      industries,
+      aboutYou: data.aboutYou,
+      watchTargets,
+      matchThreshold: data.matchThreshold,
+      emailFrequency: data.emailFrequency,
+      scheduleHour: data.scheduleHour,
+      scheduleDayOfWeek: data.scheduleDayOfWeek,
+      scheduleDayOfMonth: data.scheduleDayOfMonth,
+      timezone: data.timezone,
+    },
+  };
 }
