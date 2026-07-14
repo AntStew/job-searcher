@@ -11,11 +11,8 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col justify-center gap-6 p-6">
-      <div className="flex flex-col items-center gap-2 text-center">
-        <span className="text-4xl">💀</span>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight">
-          <span className="text-loot">UNEMPLOYMENT FINAL BOSS</span>
-        </h1>
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 className="font-display text-xl font-semibold">Sign in</h1>
         <p className="text-sm text-muted">
           Drop your email, get a magic link. Passwords are for people with jobs.
         </p>
