@@ -7,16 +7,26 @@ import { searchAndMatchForUser } from "../_shared/searchAndMatchForUser.ts";
 import { sendDigestForUser } from "../_shared/sendDigest.ts";
 import { sendErrorAlert } from "../_shared/sendErrorAlert.ts";
 
+// Supabase provides this for background work that outlives the HTTP response.
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
+
 /**
  * Runs on Supabase Edge Functions (Deno) instead of Vercel so the heavy
  * per-user agent search isn't bound by Vercel Hobby's ~60s function
  * timeout. Triggered hourly by a GitHub Actions scheduled workflow (see
  * .github/workflows/hourly-pipeline.yml) rather than Vercel Cron, since
  * Vercel Hobby cron only fires once a day.
+ *
+ * Also handles on-demand "Run now" from the app: POST body
+ * `{ "userId": "<uuid>", "manual": true }` runs that one user in the
+ * background and returns 202 immediately so the Vercel proxy isn't killed
+ * mid-search.
  */
 
-async function runForUser(userId: string): Promise<Record<string, unknown>> {
-  await markRunStarted(userId);
+async function runSearchAndSend(
+  userId: string,
+  { scheduled }: { scheduled: boolean },
+): Promise<Record<string, unknown>> {
   let errorSummary: string | null = null;
   let result: Record<string, unknown>;
   try {
@@ -30,7 +40,7 @@ async function runForUser(userId: string): Promise<Record<string, unknown>> {
     errorSummary = error instanceof Error ? error.message : String(error);
     result = { error: errorSummary };
   }
-  await markRunFinished(userId, { scheduled: true, error: errorSummary });
+  await markRunFinished(userId, { scheduled, error: errorSummary });
 
   if (errorSummary) {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
@@ -40,10 +50,57 @@ async function runForUser(userId: string): Promise<Record<string, unknown>> {
   return result;
 }
 
+async function runForUser(
+  userId: string,
+  { scheduled }: { scheduled: boolean },
+): Promise<Record<string, unknown>> {
+  await markRunStarted(userId);
+  return runSearchAndSend(userId, { scheduled });
+}
+
 Deno.serve(async (req) => {
   const expected = `Bearer ${Deno.env.get("EDGE_FUNCTION_SECRET")}`;
   if (req.headers.get("authorization") !== expected) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  }
+
+  let body: { userId?: string; manual?: boolean } = {};
+  if (req.method === "POST") {
+    try {
+      body = await req.json();
+    } catch {
+      body = {};
+    }
+  }
+
+  // On-demand manual run for one user (dashboard "Run now").
+  if (body.manual && typeof body.userId === "string" && body.userId.length > 0) {
+    const userId = body.userId;
+    const [settings] = await db
+      .select({ userId: userSettings.userId })
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId));
+    if (!settings) {
+      return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
+    }
+
+    // Mark in-progress BEFORE responding so the dashboard poll never
+    // falsely sees "idle" in the gap before background work starts.
+    await markRunStarted(userId);
+    const work = runSearchAndSend(userId, { scheduled: false });
+    try {
+      EdgeRuntime.waitUntil(work);
+      return new Response(JSON.stringify({ started: true, userId }), {
+        status: 202,
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      // Local supabase or older runtime without waitUntil — await instead.
+      const result = await work;
+      return new Response(JSON.stringify({ started: true, userId, result }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }
 
   const allSettings = await db.select().from(userSettings);
@@ -55,7 +112,7 @@ Deno.serve(async (req) => {
   // runForUser never throws (errors are captured per user), so allSettled's
   // rejected branch is just a final safety net.
   const outcomes = await Promise.allSettled(
-    dueSettings.map((settings) => runForUser(settings.userId)),
+    dueSettings.map((settings) => runForUser(settings.userId, { scheduled: true })),
   );
 
   const results: Record<string, unknown> = {};

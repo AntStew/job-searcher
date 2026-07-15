@@ -5,21 +5,18 @@ import { userSettings } from "@/db/schema";
 import {
   hoursUntilManualRunAllowed,
   isRunInProgress,
-  markRunFinished,
-  markRunStarted,
 } from "@/lib/pipeline/runStatus";
-import { searchAndMatchForUser } from "@/lib/pipeline/searchAndMatchForUser";
-import { sendDigestForUser } from "@/lib/email/sendDigest";
 import { createClient } from "@/lib/supabase/server";
 
-export const maxDuration = 280;
-
 /**
- * Manual "Run now" for the current user. Fully independent of the scheduled
- * digest: it ignores the schedule, and its success is recorded on
- * lastManualRunAt (not lastRunAt), so clicking it never delays or suppresses
- * the scheduled email. Non-admins get one manual run per 12h so it can't be
- * spammed (each run costs real Anthropic usage).
+ * Manual "Run now" for the current user.
+ *
+ * IMPORTANT: the search itself does NOT run on Vercel. Hobby plans kill
+ * functions around ~60s, and a Sonnet + web_search hunt often takes minutes —
+ * that was stranding `run_started_at` and freezing the button. Instead we
+ * auth/cooldown-check here, then kick the Supabase edge function (same one
+ * the hourly cron uses) with `{ userId, manual: true }`, which returns 202
+ * and finishes the hunt in the background.
  */
 export async function POST() {
   const supabase = await createClient();
@@ -51,9 +48,6 @@ export async function POST() {
     );
   }
 
-  // The dashboard button disables itself while a run is live, but a stale tab
-  // (or the scheduled run firing at the same moment) can still double-submit —
-  // and each run costs real Anthropic usage.
   if (isRunInProgress(settings?.runStartedAt ?? null)) {
     return NextResponse.json(
       { error: "A search is already running for you — give it a minute." },
@@ -74,22 +68,55 @@ export async function POST() {
     }
   }
 
-  await markRunStarted(user.id);
-  try {
-    const searchResult = await searchAndMatchForUser(user.id);
-    const sendResult = await sendDigestForUser(user.id);
+  const edgeSecret = process.env.EDGE_FUNCTION_SECRET;
+  const edgeUrl =
+    process.env.SUPABASE_FUNCTION_URL ??
+    (process.env.NEXT_PUBLIC_SUPABASE_URL
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/run-scheduled-pipeline`
+      : null);
 
-    // A run that produced only errors doesn't burn the manual cooldown.
-    await markRunFinished(user.id, {
-      scheduled: false,
-      error: searchResult.errors.length > 0 ? searchResult.errors.join("; ") : null,
-    });
-    return NextResponse.json({ searchResult, sendResult });
-  } catch (err) {
-    await markRunFinished(user.id, {
-      scheduled: false,
-      error: err instanceof Error ? err.message : String(err),
-    });
-    throw err;
+  if (!edgeSecret || !edgeUrl) {
+    return NextResponse.json(
+      {
+        error:
+          "Run now isn't configured (missing EDGE_FUNCTION_SECRET or SUPABASE_FUNCTION_URL).",
+      },
+      { status: 500 },
+    );
   }
+
+  let edgeRes: Response;
+  try {
+    edgeRes = await fetch(edgeUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${edgeSecret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ userId: user.id, manual: true }),
+    });
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: `Could not reach the search runner: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      },
+      { status: 502 },
+    );
+  }
+
+  const data = (await edgeRes.json().catch(() => ({}))) as {
+    error?: string;
+    started?: boolean;
+  };
+
+  if (!edgeRes.ok) {
+    return NextResponse.json(
+      { error: data.error ?? "Search runner refused the request." },
+      { status: edgeRes.status },
+    );
+  }
+
+  return NextResponse.json({ started: true }, { status: 202 });
 }

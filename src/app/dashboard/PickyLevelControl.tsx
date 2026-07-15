@@ -1,23 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { closestThreshold, ThresholdPicker } from "@/components/ThresholdPicker";
 import { buttonPrimary } from "@/lib/ui";
 import { setMatchThreshold } from "./actions";
 
-type RunResult = {
-  searchResult: { found: number; upserted: number; scored: number; errors: string[] };
-  sendResult:
-    | { sent: true; jobCount: number }
-    | { sent: false; reason: "no_matches" | "paused" | "user_not_found" };
-};
-
-const REASON_TEXT: Record<string, string> = {
-  no_matches: "Nothing cleared your bar this run. The bar stays UP.",
-  paused: "Emails are paused — matches still saved tho.",
-  user_not_found: "Something went wrong finding your account.",
-};
+const POLL_MS = 2500;
+const POLL_TIMEOUT_MS = 8 * 60 * 1000;
 
 export function PickyLevelControl({
   initialThreshold,
@@ -32,18 +22,80 @@ export function PickyLevelControl({
   const [thresholdError, setThresholdError] = useState<string | null>(null);
 
   const [running, setRunning] = useState(false);
-  const [runResult, setRunResult] = useState<RunResult | null>(null);
-  const [runError, setRunError] = useState<string | null>(null);
+  const [statusLine, setStatusLine] = useState<string | null>(null);
+  const [statusIsError, setStatusIsError] = useState(false);
+  const pollStartedAt = useRef<number | null>(null);
+  const syncedServerRun = useRef(false);
 
   const runBusy = running || serverRunning;
-  const showingRunStatus = running || !!runResult || !!runError || (serverRunning && !running);
+  const showingStatus = runBusy || !!statusLine;
+
+  useEffect(() => {
+    if (!running) return;
+
+    let cancelled = false;
+    pollStartedAt.current = Date.now();
+
+    async function poll() {
+      while (!cancelled) {
+        if (Date.now() - (pollStartedAt.current ?? 0) > POLL_TIMEOUT_MS) {
+          setRunning(false);
+          setStatusIsError(true);
+          setStatusLine(
+            "Still hunting after several minutes — refresh later. Don’t spam Run now.",
+          );
+          router.refresh();
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/pipeline/run-status");
+          const data = (await res.json()) as {
+            running?: boolean;
+            lastRunError?: string | null;
+          };
+          if (!res.ok) throw new Error("Status check failed");
+
+          if (!data.running) {
+            setRunning(false);
+            if (data.lastRunError) {
+              setStatusIsError(true);
+              setStatusLine(data.lastRunError);
+            } else {
+              setStatusIsError(false);
+              setStatusLine("Hunt finished — check Recent matches below.");
+            }
+            router.refresh();
+            return;
+          }
+        } catch {
+          // Keep polling through brief blips.
+        }
+
+        await new Promise((r) => setTimeout(r, POLL_MS));
+      }
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [running, router]);
+
+  // Page loaded mid-hunt — adopt server busy state once and poll.
+  useEffect(() => {
+    if (serverRunning && !syncedServerRun.current) {
+      syncedServerRun.current = true;
+      setRunning(true);
+      setStatusIsError(false);
+      setStatusLine("Search already in progress — hanging tight…");
+    }
+  }, [serverRunning]);
 
   function handleThresholdChange(value: number) {
     const previous = threshold;
     setThreshold(value);
     setThresholdError(null);
-    setRunResult(null);
-    setRunError(null);
     startThresholdTransition(async () => {
       const result = await setMatchThreshold(value);
       if (!result.ok) {
@@ -55,57 +107,44 @@ export function PickyLevelControl({
 
   async function handleRun() {
     setRunning(true);
-    setRunError(null);
-    setRunResult(null);
+    setStatusIsError(false);
+    setStatusLine("Kicking off the hunt…");
+
     try {
       const res = await fetch("/api/pipeline/run-now", { method: "POST" });
-      const data = await res.json();
+      const data = (await res.json()) as { error?: string; started?: boolean };
+
       if (!res.ok) {
-        setRunError(data.error ?? "Run failed.");
+        setRunning(false);
+        setStatusIsError(true);
+        setStatusLine(data.error ?? "Run failed.");
+        router.refresh();
         return;
       }
-      setRunResult(data);
-      router.refresh();
+
+      setStatusLine("Hunting… often 1–3 minutes. Leave this tab open.");
     } catch {
-      setRunError("Something went wrong running the search.");
-    } finally {
       setRunning(false);
+      setStatusIsError(true);
+      setStatusLine("Something went wrong starting the search.");
+      router.refresh();
     }
   }
-
-  const runFooter = showingRunStatus ? (
-    <div className="flex flex-col gap-1 text-sm">
-      {running && <p className="text-muted">Hunting… hang tight.</p>}
-      {serverRunning && !running && (
-        <p className="text-muted">Already hunting (probably the scheduled run) — hang tight.</p>
-      )}
-      {runError && <p className="text-danger">{runError}</p>}
-      {runResult && (
-        <p className="text-muted">
-          The agent dug up {runResult.searchResult.found} job
-          {runResult.searchResult.found === 1 ? "" : "s"}.{" "}
-          {runResult.sendResult.sent
-            ? `Sent ${runResult.sendResult.jobCount} to your inbox. Go look.`
-            : REASON_TEXT[runResult.sendResult.reason]}
-        </p>
-      )}
-      {runResult && runResult.searchResult.errors.length > 0 && (
-        <ul className="text-xs text-danger">
-          {runResult.searchResult.errors.map((err) => (
-            <li key={err}>{err}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  ) : undefined;
 
   return (
     <div className="flex flex-col gap-2">
       <ThresholdPicker
         value={threshold}
         onChange={handleThresholdChange}
-        disabled={thresholdPending}
-        footer={runFooter}
+        disabled={thresholdPending || runBusy}
+        showDescription={!showingStatus}
+        footer={
+          showingStatus ? (
+            <p className={`text-sm ${statusIsError ? "text-danger" : "text-muted"}`}>
+              {statusLine ?? "Hunting… hang tight."}
+            </p>
+          ) : undefined
+        }
         trailing={
           <button
             type="button"
@@ -113,7 +152,6 @@ export function PickyLevelControl({
             disabled={runBusy}
             className={`${buttonPrimary} relative h-full min-h-[2.5rem] shrink-0`}
           >
-            {/* Size to the longer label so swapping in "Hunting…" doesn't resize. */}
             <span className="invisible" aria-hidden="true">
               Hunting…
             </span>
