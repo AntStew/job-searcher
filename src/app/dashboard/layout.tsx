@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
 import { signOut } from "./actions";
-import { NavLinks } from "./NavLinks";
+import { DashboardHeader } from "./DashboardHeader";
 
 export default async function DashboardLayout({
   children,
@@ -13,23 +13,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="relative border-b border-border/60 bg-surface/80 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 sm:px-6">
-          <NavLinks isAdmin={!!isAdmin} />
-          <div className="flex items-center gap-3 text-sm text-muted">
-            <span className="hidden max-w-[180px] truncate sm:inline">{user?.email}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:border-danger hover:text-danger"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-        <div className="h-[3px] w-full bg-[linear-gradient(to_right,#f0b429,#ff8a5c,#e94f8a)]" />
-      </header>
+      <DashboardHeader email={user?.email} isAdmin={!!isAdmin} signOut={signOut} />
       <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6">{children}</main>
     </div>
   );

@@ -33,6 +33,7 @@ export function renderDigestHtml(
   jobsList: DigestJob[],
   unsubscribeUrl: string,
   settingsUrl: string,
+  dashboardUrl: string,
   taunt?: string,
 ): string {
   const cards = jobsList
@@ -75,15 +76,22 @@ export function renderDigestHtml(
       <div style="padding:0 4px 16px;">
         <table cellpadding="0" cellspacing="0"><tbody><tr>
           <td style="background-color:${ACCENT};border-radius:10px;width:36px;height:36px;text-align:center;color:#ffffff;font-weight:700;font-size:18px;">J</td>
-          <td style="padding-left:10px;color:${INK};font-weight:600;font-size:16px;">Unemployment Final Boss</td>
+          <td style="padding-left:10px;font-weight:600;font-size:16px;">
+            <a href="${escapeHtml(dashboardUrl)}" style="color:${INK};text-decoration:none;">Unemployment Final Boss</a>
+          </td>
         </tr></tbody></table>
       </div>
       <div style="background-color:#ffffff;border-radius:14px;border:1px solid ${BORDER};padding:24px;">
         <h2 style="margin:0 0 4px;color:${INK};font-size:20px;">${escapeHtml(taunt ?? "Your new matches")}</h2>
         <p style="margin:0 0 8px;color:${MUTED};font-size:14px;">${jobsList.length} job${jobsList.length === 1 ? "" : "s"} cleared your match threshold — best fits first.</p>
         ${cards}
+        <div style="margin-top:20px;text-align:center;">
+          <a href="${escapeHtml(dashboardUrl)}" style="display:inline-block;background-color:${INK};color:#ffffff;border-radius:8px;padding:12px 20px;font-size:14px;font-weight:600;text-decoration:none;">Open your matches →</a>
+        </div>
       </div>
       <p style="padding:16px 8px 0;text-align:center;color:#9ca3af;font-size:12px;margin:0;">
+        <a href="${escapeHtml(dashboardUrl)}" style="color:${MUTED};">View on the site</a>
+        &nbsp;·&nbsp;
         <a href="${escapeHtml(settingsUrl)}" style="color:${MUTED};">Update your preferences</a>
         &nbsp;·&nbsp;
         <a href="${escapeHtml(unsubscribeUrl)}" style="color:${MUTED};">Pause these emails</a>

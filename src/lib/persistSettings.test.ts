@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/db", () => ({ db: {} }));
 
 import { settingsSchema } from "./persistSettings";
+import { clampWords, countWords, SETTINGS_LIMITS } from "./settingsLimits";
 
 const VALID = {
   resumeText: "resume",
@@ -54,7 +55,36 @@ describe("settingsSchema", () => {
   });
 
   it("allows a resume up to the size cap and rejects beyond it", () => {
-    expect(settingsSchema.safeParse({ ...VALID, resumeText: "x".repeat(20000) }).success).toBe(true);
-    expect(settingsSchema.safeParse({ ...VALID, resumeText: "x".repeat(20001) }).success).toBe(false);
+    expect(
+      settingsSchema.safeParse({
+        ...VALID,
+        resumeText: "x".repeat(SETTINGS_LIMITS.resumeTextChars),
+      }).success,
+    ).toBe(true);
+    expect(
+      settingsSchema.safeParse({
+        ...VALID,
+        resumeText: "x".repeat(SETTINGS_LIMITS.resumeTextChars + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("caps about-you by word count", () => {
+    const ok = Array.from({ length: SETTINGS_LIMITS.aboutYouWords }, () => "word").join(" ");
+    const tooMany = `${ok} extra`;
+    expect(settingsSchema.safeParse({ ...VALID, aboutYou: ok }).success).toBe(true);
+    expect(settingsSchema.safeParse({ ...VALID, aboutYou: tooMany }).success).toBe(false);
+  });
+});
+
+describe("countWords / clampWords", () => {
+  it("counts words and ignores empty input", () => {
+    expect(countWords("")).toBe(0);
+    expect(countWords("  hi there  ")).toBe(2);
+  });
+
+  it("clamps to the first N words", () => {
+    expect(clampWords("one two three four", 2)).toBe("one two");
+    expect(clampWords("one two", 5)).toBe("one two");
   });
 });

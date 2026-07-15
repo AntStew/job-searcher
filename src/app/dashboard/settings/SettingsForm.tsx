@@ -2,8 +2,9 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { saveSettings, type SaveSettingsResult } from "./actions";
-import { buttonPrimary, buttonSecondary, card, hint as hintClass, input, label as labelClass, linkButton, select, textarea } from "@/lib/ui";
-import { THRESHOLD_PRESETS } from "@/lib/matchThreshold";
+import { buttonPrimary, buttonSecondary, hint as hintClass, input, label as labelClass, linkButton, select, textarea } from "@/lib/ui";
+import { closestThreshold, ThresholdPicker } from "@/components/ThresholdPicker";
+import { clampWords, countWords, SETTINGS_LIMITS } from "@/lib/settingsLimits";
 import { COMMON_TIMEZONES, WEEKDAY_OPTIONS } from "@/lib/timezone";
 
 const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
@@ -44,18 +45,16 @@ export function SettingsForm({
   adminLocked?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(saveSettings, initialState);
-  const [threshold, setThreshold] = useState<number>(() =>
-    THRESHOLD_PRESETS.reduce((closest, preset) =>
-      Math.abs(preset.value - initial.matchThreshold) < Math.abs(closest.value - initial.matchThreshold)
-        ? preset
-        : closest,
-    ).value,
+  const [threshold, setThreshold] = useState(() => closestThreshold(initial.matchThreshold));
+  const [resumeText, setResumeText] = useState(() =>
+    initial.resumeText.slice(0, SETTINGS_LIMITS.resumeTextChars),
   );
-  const [resumeText, setResumeText] = useState(initial.resumeText);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [uploadPhase, setUploadPhase] = useState<"uploading" | "processing" | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [desiredRoles, setDesiredRoles] = useState(initial.desiredRoles.join(", "));
+  const [desiredRoles, setDesiredRoles] = useState(() =>
+    initial.desiredRoles.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars),
+  );
   const [suggestingRoles, setSuggestingRoles] = useState(false);
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [emailFrequency, setEmailFrequency] = useState(initial.emailFrequency);
@@ -63,15 +62,26 @@ export function SettingsForm({
   const [scheduleDayOfWeek, setScheduleDayOfWeek] = useState(initial.scheduleDayOfWeek);
   const [scheduleDayOfMonth, setScheduleDayOfMonth] = useState(initial.scheduleDayOfMonth);
   const [timezone, setTimezone] = useState(initial.timezone);
-  const [locations, setLocations] = useState(initial.locations.join(", "));
+  const [locations, setLocations] = useState(() =>
+    initial.locations.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars),
+  );
   const [remotePreference, setRemotePreference] = useState(initial.remotePreference);
   const [salaryMin, setSalaryMin] = useState(initial.salaryMin?.toString() ?? "");
   const [yearsOfExperience, setYearsOfExperience] = useState(
     initial.yearsOfExperience?.toString() ?? "",
   );
-  const [industries, setIndustries] = useState(initial.industries.join(", "));
-  const [aboutYou, setAboutYou] = useState(initial.aboutYou);
-  const [watchTargets, setWatchTargets] = useState(initial.watchTargets.join(", "));
+  const [industries, setIndustries] = useState(() =>
+    initial.industries.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars),
+  );
+  const [aboutYou, setAboutYou] = useState(() =>
+    clampWords(
+      initial.aboutYou.slice(0, SETTINGS_LIMITS.aboutYouChars),
+      SETTINGS_LIMITS.aboutYouWords,
+    ),
+  );
+  const [watchTargets, setWatchTargets] = useState(() =>
+    initial.watchTargets.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars),
+  );
 
   // The page's server-rendered `initial` prop can lag behind what we just
   // saved (Next.js doesn't guarantee the post-action re-render reflects the
@@ -80,15 +90,20 @@ export function SettingsForm({
   useEffect(() => {
     if (!state?.ok) return;
     const saved = state.saved;
-    setResumeText(saved.resumeText);
-    setDesiredRoles(saved.desiredRoles.join(", "));
-    setLocations(saved.locations.join(", "));
+    setResumeText(saved.resumeText.slice(0, SETTINGS_LIMITS.resumeTextChars));
+    setDesiredRoles(saved.desiredRoles.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars));
+    setLocations(saved.locations.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars));
     setRemotePreference(saved.remotePreference);
     setSalaryMin(saved.salaryMin?.toString() ?? "");
     setYearsOfExperience(saved.yearsOfExperience?.toString() ?? "");
-    setIndustries(saved.industries.join(", "));
-    setAboutYou(saved.aboutYou);
-    setWatchTargets(saved.watchTargets.join(", "));
+    setIndustries(saved.industries.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars));
+    setAboutYou(
+      clampWords(
+        saved.aboutYou.slice(0, SETTINGS_LIMITS.aboutYouChars),
+        SETTINGS_LIMITS.aboutYouWords,
+      ),
+    );
+    setWatchTargets(saved.watchTargets.join(", ").slice(0, SETTINGS_LIMITS.listFieldChars));
     setThreshold(saved.matchThreshold);
     setEmailFrequency(saved.emailFrequency);
     setScheduleHour(saved.scheduleHour);
@@ -150,7 +165,13 @@ export function SettingsForm({
           setExtractError(data.error ?? "Could not read that file.");
           return;
         }
-        setResumeText(data.text);
+        const text = typeof data.text === "string" ? data.text : "";
+        setResumeText(text.slice(0, SETTINGS_LIMITS.resumeTextChars));
+        if (text.length > SETTINGS_LIMITS.resumeTextChars) {
+          setExtractError(
+            `Resume was trimmed to ${SETTINGS_LIMITS.resumeTextChars.toLocaleString()} characters.`,
+          );
+        }
       } catch {
         setExtractError("Something went wrong reading that file.");
       }
@@ -165,8 +186,8 @@ export function SettingsForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-6">
-      <section className={`${card} flex flex-col gap-3`}>
+    <form action={formAction} className="flex flex-col">
+      <section className="flex flex-col gap-3 pb-10">
         <div>
           <h2 className="font-display text-base font-semibold">Resume</h2>
           <p className={hintClass}>
@@ -201,40 +222,57 @@ export function SettingsForm({
 
         {extractError && <p className="text-xs text-danger">{extractError}</p>}
 
-        <label htmlFor="resumeText" className={hintClass}>
-          {resumeText ? "Parsed result — edit as needed before saving" : "Or paste resume text here"}
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <label htmlFor="resumeText" className={hintClass}>
+            {resumeText ? "Parsed result — edit as needed before saving" : "Or paste resume text here"}
+          </label>
+          <LimitMeter current={resumeText.length} max={SETTINGS_LIMITS.resumeTextChars} unit="chars" />
+        </div>
         <textarea
           id="resumeText"
           name="resumeText"
           value={resumeText}
-          onChange={(e) => setResumeText(e.target.value)}
+          onChange={(e) => setResumeText(e.target.value.slice(0, SETTINGS_LIMITS.resumeTextChars))}
+          maxLength={SETTINGS_LIMITS.resumeTextChars}
           rows={12}
           className={`${textarea} font-mono`}
         />
       </section>
 
-      <section className={`${card} flex flex-col gap-2`}>
-        <div>
-          <h2 className="font-display text-base font-semibold">About you</h2>
-          <p className={hintClass}>
-            Tell the search agent about your experience, goals, and what kind of work excites you — including
-            anything a job absolutely must have or must not have. The more context you give it, the better it
-            can judge whether a job is actually a good fit.
-          </p>
+      <section className="flex flex-col gap-2 border-t border-border py-10">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold">About you</h2>
+            <p className={hintClass}>
+              Goals, must-haves, dealbreakers — short and blunt is fine.
+            </p>
+          </div>
+          <LimitMeter
+            current={countWords(aboutYou)}
+            max={SETTINGS_LIMITS.aboutYouWords}
+            unit="words"
+          />
         </div>
         <textarea
           id="aboutYou"
           name="aboutYou"
           value={aboutYou}
-          onChange={(e) => setAboutYou(e.target.value)}
+          onChange={(e) =>
+            setAboutYou(
+              clampWords(
+                e.target.value.slice(0, SETTINGS_LIMITS.aboutYouChars),
+                SETTINGS_LIMITS.aboutYouWords,
+              ),
+            )
+          }
+          maxLength={SETTINGS_LIMITS.aboutYouChars}
           rows={4}
-          placeholder="e.g. I've spent the last 2 years doing customer support and want to move into a more technical role. I need fully remote work and won't consider anything with cold-calling."
+          placeholder="e.g. 2 years in support, want something more technical. Remote only — no cold-calling."
           className={textarea}
         />
       </section>
 
-      <section className={`${card} flex flex-col gap-4`}>
+      <section className="flex flex-col gap-4 border-t border-border py-10">
         <h2 className="font-display text-base font-semibold">Job preferences</h2>
 
         <div className="flex flex-col gap-1">
@@ -259,7 +297,10 @@ export function SettingsForm({
             name="desiredRoles"
             type="text"
             value={desiredRoles}
-            onChange={(e) => setDesiredRoles(e.target.value)}
+            onChange={(e) =>
+              setDesiredRoles(e.target.value.slice(0, SETTINGS_LIMITS.listFieldChars))
+            }
+            maxLength={SETTINGS_LIMITS.listFieldChars}
             className={input}
           />
         </div>
@@ -270,6 +311,7 @@ export function SettingsForm({
           hint="Comma-separated, e.g. Austin TX, Remote"
           value={locations}
           onChange={setLocations}
+          maxLength={SETTINGS_LIMITS.listFieldChars}
         />
 
         <div className="flex flex-col gap-1">
@@ -330,49 +372,30 @@ export function SettingsForm({
           hint="Comma-separated, optional"
           value={industries}
           onChange={setIndustries}
+          maxLength={SETTINGS_LIMITS.listFieldChars}
         />
 
         <Field
           name="watchTargets"
           label="Companies to watch (optional)"
-          hint="Comma-separated company names — the search agent will specifically check these as part of its search"
+          hint="Comma-separated — the agent will specifically check these"
           value={watchTargets}
           onChange={setWatchTargets}
+          maxLength={SETTINGS_LIMITS.listFieldChars}
         />
       </section>
 
-      <section className={`${card} flex flex-col gap-3`}>
+      <section className="flex flex-col gap-3 border-t border-border py-10">
         <div>
           <h2 className="font-display text-base font-semibold">Match threshold</h2>
           <p className={hintClass}>How picky should we be about what lands in your inbox?</p>
         </div>
 
         <input type="hidden" name="matchThreshold" value={threshold} />
-
-        <div className="grid grid-cols-3 gap-2">
-          {THRESHOLD_PRESETS.map((preset) => (
-            <button
-              type="button"
-              key={preset.label}
-              onClick={() => setThreshold(preset.value)}
-              aria-pressed={threshold === preset.value}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                threshold === preset.value
-                  ? "border-accent bg-accent-soft text-ink"
-                  : "border-border text-muted hover:bg-bg"
-              }`}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-
-        <p className="text-sm text-muted">
-          {THRESHOLD_PRESETS.find((preset) => preset.value === threshold)?.description}
-        </p>
+        <ThresholdPicker value={threshold} onChange={setThreshold} />
       </section>
 
-      <section className={`${card} flex flex-col gap-4`}>
+      <section className="flex flex-col gap-4 border-t border-border py-10">
         <div>
           <h2 className="font-display text-base font-semibold">Email schedule</h2>
           <p className={hintClass}>
@@ -516,12 +539,12 @@ export function SettingsForm({
         )}
       </section>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3">
+        {state?.ok === true && <span className="text-sm text-accent">Saved.</span>}
+        {state?.ok === false && <span className="text-sm text-danger">{state.error}</span>}
         <button type="submit" disabled={pending} className={buttonPrimary}>
           {pending ? "Saving…" : "Save"}
         </button>
-        {state?.ok === true && <span className="text-sm text-accent">Saved.</span>}
-        {state?.ok === false && <span className="text-sm text-danger">{state.error}</span>}
       </div>
     </form>
   );
@@ -533,12 +556,14 @@ function Field({
   hint,
   value,
   onChange,
+  maxLength,
 }: {
   name: string;
   label: string;
   hint?: string;
   value: string;
   onChange: (value: string) => void;
+  maxLength?: number;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -551,9 +576,29 @@ function Field({
         name={name}
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) =>
+          onChange(maxLength ? e.target.value.slice(0, maxLength) : e.target.value)
+        }
+        maxLength={maxLength}
         className={input}
       />
     </div>
+  );
+}
+
+function LimitMeter({
+  current,
+  max,
+  unit,
+}: {
+  current: number;
+  max: number;
+  unit: string;
+}) {
+  const atLimit = current >= max;
+  return (
+    <p className={`shrink-0 text-xs tabular-nums ${atLimit ? "text-danger" : "text-muted"}`}>
+      {current.toLocaleString()} / {max.toLocaleString()} {unit}
+    </p>
   );
 }

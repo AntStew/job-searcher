@@ -2,19 +2,27 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { jobPreferences, userProfiles, userSettings } from "@/db/schema";
+import { countWords, SETTINGS_LIMITS } from "@/lib/settingsLimits";
+
+export { clampWords, countWords, SETTINGS_LIMITS } from "@/lib/settingsLimits";
 
 // Shared by the Settings form and the onboarding wizard so both flows save
 // through identical validation and writes.
 export const settingsSchema = z.object({
-  resumeText: z.string().max(20000),
-  desiredRoles: z.string().max(2000),
-  locations: z.string().max(2000),
+  resumeText: z.string().max(SETTINGS_LIMITS.resumeTextChars),
+  desiredRoles: z.string().max(SETTINGS_LIMITS.listFieldChars),
+  locations: z.string().max(SETTINGS_LIMITS.listFieldChars),
   remotePreference: z.enum(["remote", "hybrid", "onsite", "no_preference"]),
   salaryMin: z.string().optional(),
   yearsOfExperience: z.string().optional(),
-  industries: z.string().max(2000),
-  aboutYou: z.string().max(4000),
-  watchTargets: z.string().max(2000),
+  industries: z.string().max(SETTINGS_LIMITS.listFieldChars),
+  aboutYou: z
+    .string()
+    .max(SETTINGS_LIMITS.aboutYouChars)
+    .refine((value) => countWords(value) <= SETTINGS_LIMITS.aboutYouWords, {
+      message: `Keep "About you" to ${SETTINGS_LIMITS.aboutYouWords} words or fewer.`,
+    }),
+  watchTargets: z.string().max(SETTINGS_LIMITS.listFieldChars),
   matchThreshold: z.coerce.number().int().min(0).max(100),
   emailFrequency: z.enum(["daily", "weekly", "monthly", "paused"]),
   scheduleHour: z.coerce.number().int().min(0).max(23),

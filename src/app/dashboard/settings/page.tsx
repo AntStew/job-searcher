@@ -52,7 +52,7 @@ export default async function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div>
         <h1 className="font-display text-xl font-semibold">Your profile &amp; preferences</h1>
         <p className="text-sm text-muted">

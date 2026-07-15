@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Inter, Geist_Mono } from "next/font/google";
+import { Inter, Orbitron, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const display = Bricolage_Grotesque({
-  variable: "--font-display",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
 
 const body = Inter({
   variable: "--font-body",
   subsets: ["latin"],
+});
+
+// Robotic display face for headings/labels — fits an AI agent that hunts
+// jobs for you. Kept off body text and form fields (input/select/textarea
+// stay Inter) so the app is still legible for non-technical family members.
+const display = Orbitron({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -31,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${display.variable} ${body.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${body.variable} ${display.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-bg text-ink">{children}</body>
     </html>

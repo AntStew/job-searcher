@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setMatchFeedback, setMatchStatus } from "./matchActions";
+import { scoreColor } from "@/lib/scoreColor";
 import { select } from "@/lib/ui";
+import { setMatchFeedback, setMatchStatus } from "./matchActions";
 
 type Feedback = "liked" | "disliked" | null;
 type ApplicationStatus = "none" | "interested" | "applied" | "interviewing" | "rejected" | "offer";
@@ -36,7 +37,6 @@ export type MatchRowProps = {
   reasoning: string;
   matchedCriteria: string[];
   experienceRequired: string | null;
-  dealbreakerHit: boolean;
   /** Job was found within the last 24h — gets a "New" marker. */
   isNew?: boolean;
   initialFeedback: Feedback;
@@ -106,14 +106,14 @@ export function MatchRow(props: MatchRowProps) {
                 setOpen((v) => !v);
               }
             }}
-            className="-mx-2 flex cursor-pointer flex-col gap-1.5 rounded-lg px-2 py-2.5 transition-colors hover:bg-white/[0.03] sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+            className="-mx-2 flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-panel"
           >
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 {props.isNew && (
                   <span
                     title="Found in the last 24 hours"
-                    className="text-[10px] font-bold uppercase tracking-wider text-accent"
+                    className="shrink-0 rounded bg-yellow-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-ink"
                   >
                     New
                   </span>
@@ -124,7 +124,7 @@ export function MatchRow(props: MatchRowProps) {
                   rel="noreferrer"
                   onClick={(e) => e.stopPropagation()}
                   title="Open the job posting"
-                  className="group/link inline-flex min-w-0 items-center gap-1 text-sm font-medium text-ink hover:text-accent"
+                  className="font-display group/link inline-flex min-w-0 items-center gap-1 text-sm font-medium text-ink hover:text-accent"
                 >
                   <span className="truncate">{props.title}</span>
                   <svg
@@ -150,17 +150,10 @@ export function MatchRow(props: MatchRowProps) {
                   {STATUS_BADGE[status]}
                 </span>
               )}
-              {props.dealbreakerHit && (
-                <span
-                  title="Conflicts with something you said matters to you — check the details"
-                  className="rounded-full border border-danger/40 px-2 py-0.5 text-xs text-danger"
-                >
-                  Dealbreaker
-                </span>
-              )}
               <span
                 title="Match score out of 100"
-                className="rounded-lg bg-accent-soft px-2.5 py-1.5 font-mono text-sm font-semibold leading-none text-ink"
+                className="rounded-lg px-2.5 py-1.5 font-mono text-sm font-semibold leading-none text-white"
+                style={{ backgroundColor: scoreColor(props.score) }}
               >
                 {props.score}
               </span>
@@ -182,38 +175,24 @@ export function MatchRow(props: MatchRowProps) {
             }`}
           >
             <div className="overflow-hidden">
-              <div className="mb-2 mt-1 flex flex-col gap-3 rounded-lg bg-bg p-4 text-sm">
-                <p className="border-l-2 border-accent pl-3 leading-relaxed text-ink">
-                  {props.reasoning}
+              <div className="mb-2 flex flex-col gap-3 border-t border-border pt-3 text-sm">
+                <p className="leading-relaxed text-ink">{props.reasoning}</p>
+
+                <p className="text-xs text-muted">
+                  {props.experienceRequired && <>Experience: {props.experienceRequired} · </>}
+                  {props.matchedCriteria.length > 0 && (
+                    <>Matched: {props.matchedCriteria.join(", ")} · </>
+                  )}
+                  Found {props.addedText}
                 </p>
 
-                {(props.experienceRequired || props.matchedCriteria.length > 0) && (
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-                    {props.experienceRequired && (
-                      <span className="mr-1">
-                        <span className="font-medium text-ink">Experience:</span>{" "}
-                        {props.experienceRequired}
-                      </span>
-                    )}
-                    {props.matchedCriteria.map((criterion) => (
-                      <span
-                        key={criterion}
-                        className="rounded-full border border-border bg-surface px-2 py-0.5"
-                      >
-                        {criterion}
-                      </span>
-                    ))}
-                    <span className="ml-auto">Found {props.addedText}</span>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3 text-xs">
                     <a
                       href={props.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-[#191207] transition-colors hover:bg-accent-hover"
+                      className="rounded-md bg-ink px-3 py-1.5 font-medium text-white transition-colors hover:bg-ink/85"
                     >
                       Open job ↗
                     </a>
@@ -222,10 +201,8 @@ export function MatchRow(props: MatchRowProps) {
                       onClick={handleLiked}
                       aria-pressed={feedback === "liked"}
                       title="The agent will hunt for more jobs like this one"
-                      className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                        feedback === "liked"
-                          ? "border-accent bg-accent-soft text-ink"
-                          : "border-border text-muted hover:text-ink"
+                      className={`transition-colors hover:underline ${
+                        feedback === "liked" ? "font-medium text-accent" : "text-muted hover:text-ink"
                       }`}
                     >
                       👍 More like this
@@ -239,10 +216,10 @@ export function MatchRow(props: MatchRowProps) {
                           ? "Removes it from your list and steers the agent away from jobs like it"
                           : "Steers the agent away from jobs like this one"
                       }
-                      className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                      className={`transition-colors hover:underline ${
                         !removable && feedback === "disliked"
-                          ? "border-danger bg-danger/10 text-danger"
-                          : "border-border text-muted hover:border-danger/50 hover:text-danger"
+                          ? "font-medium text-danger"
+                          : "text-muted hover:text-danger"
                       }`}
                     >
                       👎 Not interested

@@ -76,13 +76,15 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
   }));
 
   const taunt = TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
+  const baseUrl = process.env.APP_BASE_URL ?? "";
 
   const html = await render(
     JobDigestEmail({
       jobsList: digestJobs,
       taunt,
       unsubscribeUrl: unsubscribeUrl(userId),
-      settingsUrl: `${process.env.APP_BASE_URL ?? ""}/dashboard/settings`,
+      settingsUrl: `${baseUrl}/dashboard/settings`,
+      dashboardUrl: `${baseUrl}/dashboard`,
     }),
   );
 

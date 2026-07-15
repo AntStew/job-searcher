@@ -6,14 +6,12 @@ import { jobMatches, jobs, userSettings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
 import { nextDueDate } from "@/lib/pipeline/schedule";
 import { isRunInProgress } from "@/lib/pipeline/runStatus";
-import { thresholdLabel } from "@/lib/matchThreshold";
 import { formatDate, formatDateTime, formatSalary } from "@/lib/format";
 import { pickTaunt, TAUNT_EMOJIS } from "@/lib/taunts";
 import { WEEKDAY_OPTIONS } from "@/lib/timezone";
-import { card } from "@/lib/ui";
-import { RunNowButton } from "./RunNowButton";
 import { MatchSortSelect } from "./MatchSortSelect";
 import { MatchRow } from "./MatchRow";
+import { PickyLevelControl } from "./PickyLevelControl";
 
 const SORT_OPTIONS = {
   score: desc(jobMatches.score),
@@ -109,12 +107,11 @@ export default async function DashboardPage({
         : formatDateTime(next);
 
   return (
-    <div className="flex flex-col gap-6">
-      <p className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
-        <span>{randomEmoji()}</span> <span className="text-loot">{taunt}</span>{" "}
-        <span>{randomEmoji()}</span>
+    <div className="flex flex-col">
+      <p className="mb-10 font-display text-base font-bold text-ink sm:text-lg">
+        {randomEmoji()} {taunt} {randomEmoji()}
       </p>
-      <div className={`${card} flex flex-col gap-5`}>
+      <div className="flex flex-col gap-5 pb-10">
         <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
           <Stat
             label="Last search"
@@ -134,21 +131,14 @@ export default async function DashboardPage({
             href="/dashboard/tracker"
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-          <p className="text-xs text-muted">
-            Picky level:{" "}
-            <span className="font-medium text-ink">{thresholdLabel(settings?.matchThreshold ?? 60)}</span> —
-            change it (or your schedule) in{" "}
-            <Link href="/dashboard/settings" className="text-accent underline underline-offset-2">
-              Settings
-            </Link>
-            .
-          </p>
-          <RunNowButton serverRunning={agentRunning} />
-        </div>
+        <PickyLevelControl
+          initialThreshold={settings?.matchThreshold ?? 60}
+          serverRunning={agentRunning}
+        />
+
       </div>
 
-      <div className={card}>
+      <section className="flex flex-col gap-3 border-t border-border pt-10">
         <div className="flex items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 font-display text-base font-semibold">
             Recent matches
@@ -159,7 +149,7 @@ export default async function DashboardPage({
           {recentMatches.length > 0 && <MatchSortSelect />}
         </div>
         {recentMatches.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
+          <p className="text-sm text-muted">
             Nothing here yet — the agent can&apos;t match air. Fill in your{" "}
             <Link href="/dashboard/settings" className="text-accent underline underline-offset-2">
               resume and preferences
@@ -167,7 +157,7 @@ export default async function DashboardPage({
             , then hit Run now above. LLLOOOCCCKKK IIIINNNNN.
           </p>
         ) : (
-          <ul className="mt-3 flex flex-col divide-y divide-border">
+          <ul className="flex flex-col divide-y divide-border">
             {recentMatches.map(({ match, job }) => (
               <MatchRow
                 key={match.id}
@@ -182,7 +172,6 @@ export default async function DashboardPage({
                 reasoning={match.reasoning}
                 matchedCriteria={match.matchedCriteria}
                 experienceRequired={job.experienceRequired}
-                dealbreakerHit={match.dealbreakerHit}
                 isNew={job.fetchedAt >= dayAgo}
                 initialFeedback={match.feedback}
                 initialStatus={match.applicationStatus}
@@ -190,7 +179,7 @@ export default async function DashboardPage({
             ))}
           </ul>
         )}
-      </div>
+      </section>
     </div>
   );
 }
@@ -210,11 +199,11 @@ function Stat({
 }) {
   const body = (
     <div className="flex flex-col gap-0.5">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className={`font-display text-lg font-semibold ${highlight ? "text-accent" : "text-ink"}`}>
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className={`font-display text-base font-semibold ${highlight ? "text-accent" : "text-ink"}`}>
         {value}
       </p>
-      {hint && <p className="text-[11px] text-muted/80">{hint}</p>}
+      {hint && <p className="text-[10px] text-muted/80">{hint}</p>}
     </div>
   );
 

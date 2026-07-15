@@ -5,7 +5,6 @@ import { requireAdmin } from "@/lib/requireAdmin";
 import { nextDueDate } from "@/lib/pipeline/schedule";
 import { estimateCostUsd } from "@/lib/pipeline/anthropicPricing";
 import { formatDateTime } from "@/lib/format";
-import { card } from "@/lib/ui";
 import { InviteForm } from "./InviteForm";
 import { LockButton } from "./LockButton";
 
@@ -49,7 +48,7 @@ export default async function AdminPage() {
   const totalCost = rows.reduce((sum, row) => sum + row.estimatedCost, 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div>
         <h1 className="font-display text-xl font-semibold">Admin</h1>
         <p className="text-sm text-muted">
@@ -58,12 +57,12 @@ export default async function AdminPage() {
         </p>
       </div>
 
-      <div className={`${card} flex flex-col gap-3`}>
+      <section className="flex flex-col gap-3">
         <h2 className="font-display text-base font-semibold">Invite someone</h2>
         <InviteForm />
-      </div>
+      </section>
 
-      <div className={`${card} overflow-x-auto`}>
+      <section className="overflow-x-auto">
         <h2 className="mb-3 font-display text-base font-semibold">Users</h2>
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
@@ -114,7 +113,7 @@ export default async function AdminPage() {
             ))}
           </tbody>
         </table>
-      </div>
+      </section>
     </div>
   );
 }

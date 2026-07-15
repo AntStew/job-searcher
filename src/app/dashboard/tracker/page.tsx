@@ -5,7 +5,6 @@ import { db } from "@/db";
 import { jobMatches, jobs } from "@/db/schema";
 import { getCurrentUser } from "@/lib/supabase/getCurrentUser";
 import { formatDate, formatSalary } from "@/lib/format";
-import { card } from "@/lib/ui";
 import { MatchRow } from "../MatchRow";
 
 // Display order: closest-to-hired first.
@@ -42,7 +41,7 @@ export default async function TrackerPage() {
   })).filter((section) => section.rows.length > 0);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-10">
       <div>
         <h1 className="font-display text-xl font-semibold">Application tracker</h1>
         <p className="text-sm text-muted">
@@ -51,26 +50,24 @@ export default async function TrackerPage() {
       </div>
 
       {sections.length === 0 ? (
-        <div className={card}>
-          <p className="text-sm text-muted">
-            The tracker is tracking NOTHING. Set a status on a match (Interested, Applied, …) from
-            the{" "}
-            <Link href="/dashboard" className="text-accent underline underline-offset-2">
-              matches list
-            </Link>{" "}
-            and it shows up here. Yes that means actually applying to something.
-          </p>
-        </div>
+        <p className="text-sm text-muted">
+          The tracker is tracking NOTHING. Set a status on a match (Interested, Applied, …) from
+          the{" "}
+          <Link href="/dashboard" className="text-accent underline underline-offset-2">
+            matches list
+          </Link>{" "}
+          and it shows up here. Yes that means actually applying to something.
+        </p>
       ) : (
         sections.map((section) => (
-          <div key={section.status} className={card}>
+          <section key={section.status} className="flex flex-col gap-3">
             <h2 className="flex items-center gap-2 font-display text-base font-semibold">
               {section.label}
               <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-ink">
                 {section.rows.length}
               </span>
             </h2>
-            <ul className="mt-3 flex flex-col divide-y divide-border">
+            <ul className="flex flex-col divide-y divide-border">
               {section.rows.map(({ match, job }) => (
                 <MatchRow
                   key={match.id}
@@ -85,14 +82,13 @@ export default async function TrackerPage() {
                   reasoning={match.reasoning}
                   matchedCriteria={match.matchedCriteria}
                   experienceRequired={job.experienceRequired}
-                  dealbreakerHit={match.dealbreakerHit}
                   initialFeedback={match.feedback}
                   initialStatus={match.applicationStatus}
                   showNotInterested={false}
                 />
               ))}
             </ul>
-          </div>
+          </section>
         ))
       )}
     </div>

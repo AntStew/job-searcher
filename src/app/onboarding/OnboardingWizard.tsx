@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { completeOnboarding } from "./actions";
 import { buttonPrimary, buttonSecondary, hint as hintClass, input, label as labelClass, select, textarea } from "@/lib/ui";
-import { THRESHOLD_PRESETS } from "@/lib/matchThreshold";
+import { ThresholdPicker } from "@/components/ThresholdPicker";
+import { clampWords, countWords, SETTINGS_LIMITS } from "@/lib/settingsLimits";
 import { COMMON_TIMEZONES, WEEKDAY_OPTIONS } from "@/lib/timezone";
 
 const STEPS = ["Resume", "Roles", "About you", "Emails"] as const;
@@ -86,7 +87,13 @@ export function OnboardingWizard() {
           setExtractError(data.error ?? "Could not read that file.");
           return;
         }
-        setResumeText(data.text);
+        const text = typeof data.text === "string" ? data.text : "";
+        setResumeText(text.slice(0, SETTINGS_LIMITS.resumeTextChars));
+        if (text.length > SETTINGS_LIMITS.resumeTextChars) {
+          setExtractError(
+            `Resume was trimmed to ${SETTINGS_LIMITS.resumeTextChars.toLocaleString()} characters.`,
+          );
+        }
       } catch {
         setExtractError("Something went wrong reading that file.");
       }
@@ -151,9 +158,7 @@ export function OnboardingWizard() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-lg flex-col justify-center gap-6 p-6">
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="font-display text-xl font-bold">
-          <span className="text-loot">Set up your job hunt</span>
-        </h1>
+        <h1 className="font-display text-xl font-semibold">Set up your job hunt</h1>
         <p className="text-sm text-muted">
           A few quick steps, then the agent starts hunting jobs that fit you. Just do a few it
           wont kill you.
@@ -216,9 +221,20 @@ export function OnboardingWizard() {
             )}
             {extractError && <p className="text-xs text-danger">{extractError}</p>}
 
+            <div className="flex justify-end">
+              <p
+                className={`text-xs tabular-nums ${
+                  resumeText.length >= SETTINGS_LIMITS.resumeTextChars ? "text-danger" : "text-muted"
+                }`}
+              >
+                {resumeText.length.toLocaleString()} /{" "}
+                {SETTINGS_LIMITS.resumeTextChars.toLocaleString()} chars
+              </p>
+            </div>
             <textarea
               value={resumeText}
-              onChange={(e) => setResumeText(e.target.value)}
+              onChange={(e) => setResumeText(e.target.value.slice(0, SETTINGS_LIMITS.resumeTextChars))}
+              maxLength={SETTINGS_LIMITS.resumeTextChars}
               rows={9}
               placeholder="…or paste your resume text here"
               className={`${textarea} font-mono`}
@@ -248,7 +264,10 @@ export function OnboardingWizard() {
               <input
                 type="text"
                 value={desiredRoles}
-                onChange={(e) => setDesiredRoles(e.target.value)}
+                onChange={(e) =>
+                  setDesiredRoles(e.target.value.slice(0, SETTINGS_LIMITS.listFieldChars))
+                }
+                maxLength={SETTINGS_LIMITS.listFieldChars}
                 placeholder="e.g. Software Engineer, Data Analyst"
                 className={input}
               />
@@ -259,7 +278,10 @@ export function OnboardingWizard() {
               <input
                 type="text"
                 value={locations}
-                onChange={(e) => setLocations(e.target.value)}
+                onChange={(e) =>
+                  setLocations(e.target.value.slice(0, SETTINGS_LIMITS.listFieldChars))
+                }
+                maxLength={SETTINGS_LIMITS.listFieldChars}
                 placeholder="e.g. Chicago IL, Remote"
                 className={input}
               />
@@ -317,12 +339,31 @@ export function OnboardingWizard() {
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className={labelClass}>Tell the assistant about yourself</label>
+              <div className="flex items-center justify-between gap-3">
+                <label className={labelClass}>Tell the assistant about yourself</label>
+                <p
+                  className={`text-xs tabular-nums ${
+                    countWords(aboutYou) >= SETTINGS_LIMITS.aboutYouWords
+                      ? "text-danger"
+                      : "text-muted"
+                  }`}
+                >
+                  {countWords(aboutYou)} / {SETTINGS_LIMITS.aboutYouWords} words
+                </p>
+              </div>
               <textarea
                 value={aboutYou}
-                onChange={(e) => setAboutYou(e.target.value)}
+                onChange={(e) =>
+                  setAboutYou(
+                    clampWords(
+                      e.target.value.slice(0, SETTINGS_LIMITS.aboutYouChars),
+                      SETTINGS_LIMITS.aboutYouWords,
+                    ),
+                  )
+                }
+                maxLength={SETTINGS_LIMITS.aboutYouChars}
                 rows={4}
-                placeholder="Your goals, what kind of work excites you, anything a job must have or must not have…"
+                placeholder="Goals, must-haves, dealbreakers…"
                 className={textarea}
               />
             </div>
@@ -332,7 +373,10 @@ export function OnboardingWizard() {
               <input
                 type="text"
                 value={watchTargets}
-                onChange={(e) => setWatchTargets(e.target.value)}
+                onChange={(e) =>
+                  setWatchTargets(e.target.value.slice(0, SETTINGS_LIMITS.listFieldChars))
+                }
+                maxLength={SETTINGS_LIMITS.listFieldChars}
                 placeholder="e.g. Nintendo, Costco"
                 className={input}
               />
@@ -351,26 +395,11 @@ export function OnboardingWizard() {
 
             <div className="flex flex-col gap-2">
               <label className={labelClass}>How picky should we be?</label>
-              <div className="grid grid-cols-3 gap-2">
-                {THRESHOLD_PRESETS.map((preset) => (
-                  <button
-                    type="button"
-                    key={preset.label}
-                    onClick={() => setThreshold(preset.value)}
-                    aria-pressed={threshold === preset.value}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      threshold === preset.value
-                        ? "border-accent bg-accent-soft text-ink"
-                        : "border-border text-muted hover:bg-bg"
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-              <p className={hintClass}>
-                {THRESHOLD_PRESETS.find((preset) => preset.value === threshold)?.description}
-              </p>
+              <ThresholdPicker
+                value={threshold}
+                onChange={setThreshold}
+                descriptionClassName={hintClass}
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

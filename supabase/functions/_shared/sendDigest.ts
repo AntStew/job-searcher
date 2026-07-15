@@ -76,10 +76,12 @@ export async function sendDigestForUser(userId: string): Promise<SendDigestResul
 
   const taunt = TAUNTS[Math.floor(Math.random() * TAUNTS.length)];
 
+  const baseUrl = Deno.env.get("APP_BASE_URL") ?? "";
   const html = renderDigestHtml(
     digestJobs,
     unsubscribeUrl(userId),
-    `${Deno.env.get("APP_BASE_URL") ?? ""}/dashboard/settings`,
+    `${baseUrl}/dashboard/settings`,
+    `${baseUrl}/dashboard`,
     taunt,
   );
 

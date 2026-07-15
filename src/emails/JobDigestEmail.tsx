@@ -33,11 +33,13 @@ export function JobDigestEmail({
   taunt,
   unsubscribeUrl,
   settingsUrl,
+  dashboardUrl,
 }: {
   jobsList: DigestJob[];
   taunt?: string;
   unsubscribeUrl: string;
   settingsUrl: string;
+  dashboardUrl: string;
 }) {
   return (
     <Html>
@@ -63,8 +65,10 @@ export function JobDigestEmail({
                   >
                     J
                   </td>
-                  <td style={{ paddingLeft: "10px", color: INK, fontWeight: 600, fontSize: "16px" }}>
-                    Unemployment Final Boss
+                  <td style={{ paddingLeft: "10px", fontWeight: 600, fontSize: "16px" }}>
+                    <Link href={dashboardUrl} style={{ color: INK, textDecoration: "none" }}>
+                      Unemployment Final Boss
+                    </Link>
                   </td>
                 </tr>
               </tbody>
@@ -161,10 +165,31 @@ export function JobDigestEmail({
                 </Button>
               </Section>
             ))}
+
+            <Section style={{ marginTop: "20px", textAlign: "center" as const }}>
+              <Button
+                href={dashboardUrl}
+                style={{
+                  backgroundColor: INK,
+                  color: "#ffffff",
+                  borderRadius: "8px",
+                  padding: "12px 20px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                Open your matches →
+              </Button>
+            </Section>
           </Section>
 
           <Section style={{ padding: "16px 8px 0", textAlign: "center" as const }}>
             <Text style={{ color: "#9ca3af", fontSize: "12px", margin: 0 }}>
+              <Link href={dashboardUrl} style={{ color: MUTED }}>
+                View on the site
+              </Link>
+              {"  ·  "}
               <Link href={settingsUrl} style={{ color: MUTED }}>
                 Update your preferences
               </Link>

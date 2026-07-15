@@ -2,7 +2,7 @@
 
 gEt a Job bRokE BuM. This app makes sure you can't pretend you "couldn't find anything."
 
-A Claude agent reads your resume, scours the internet for real job postings, scores how well each one fits you, and emails you a digest on your schedule — with commentary from your funniest, least supportive friend. LinkedIn a scam, use this.
+A Claude agent reads your resume, scours the internet for real job postings, scores how well each one fits you, and emails you a digest on your schedule. LinkedIn a scam, use this.
 
 ## What it does
 

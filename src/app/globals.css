@@ -1,85 +1,94 @@
 @import "tailwindcss";
 
 /*
- * Unemployment Final Boss — "boss fight" theme.
- * Arena-dark plum background, legendary-loot gold accent, boss-HP pink for
- * danger. Match scores render as loot-rarity tiers in MatchRow (gold /
- * purple / blue). Keep contrast high: the audience reads this at 7am.
+ * Light, minimal theme. A geometric "robotic" display face for headings and
+ * labels (this is a job-hunting AI agent, lean into it), plain Inter for
+ * body/forms so non-technical users can actually read the forms. One
+ * restrained teal accent. The personality lives in the copy (taunts), not
+ * in decoration.
  */
 :root {
-  --bg: #120e17; /* arena black (plum-tinted, not pure black) */
-  --surface: #1b1523; /* card plum */
-  --ink: #f4f0fa; /* bone white */
-  --muted: #a396b8; /* faded sigil */
-  --border: #322947; /* rune border */
-  --accent: #f0b429; /* legendary gold */
-  --accent-hover: #ffc94d;
-  --accent-soft: rgba(240, 180, 41, 0.12);
-  --danger: #ff5d73; /* boss HP */
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --panel: #f6f6f7; /* hovers + inset panels, since the page itself is white */
+  --ink: #18181b;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --accent: #0f8a7a;
+  --accent-hover: #0c6f62;
+  --accent-soft: #e6f5f2;
+  /* Cool steel-blue neighbor to the teal accent — header underline */
+  --header-line: #3b82c4;
+  --danger: #dc2626;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-panel: var(--panel);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
+  --color-header-line: var(--header-line);
   --color-danger: var(--danger);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
   --font-mono: var(--font-geist-mono);
 }
 
-html {
-  background: var(--bg);
-  color-scheme: dark;
-}
+/*
+ * IMPORTANT: keep these base defaults inside @layer base. Tailwind v4 puts
+ * utility classes in @layer utilities, and CSS cascade layers give ANY
+ * layered rule priority over ANY unlayered rule of the same-or-higher
+ * layer regardless of selector specificity — so an unlayered `button {
+ * color: ... }` here would silently beat `text-white` on every button.
+ * (This broke the Run Now / Open job buttons once already — don't unwrap.)
+ */
+@layer base {
+  html {
+    background: var(--bg);
+    color-scheme: light;
+  }
 
-body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-}
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  }
 
-h1,
-h2,
-h3,
-.font-display {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-}
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: 0.01em;
+  }
 
-input,
-select,
-textarea,
-button {
-  font-family: inherit;
-  color: var(--ink);
-}
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+    color: var(--ink);
+  }
 
-select {
-  appearance: none;
-  background-color: var(--surface);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23a396b8' stroke-width='1.6'%3E%3Cpath d='M5.5 7.5L10 12l4.5-4.5'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1rem;
-  padding-right: 2.25rem;
-}
+  select {
+    appearance: none;
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b7280' stroke-width='1.6'%3E%3Cpath d='M5.5 7.5L10 12l4.5-4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.25rem;
+  }
 
-::selection {
-  background: rgba(240, 180, 41, 0.35);
-  color: var(--ink);
-}
-
-/* The signature: taunts and headlines get the loot gradient. */
-.text-loot {
-  background: linear-gradient(100deg, #f0b429 0%, #ff8a5c 55%, #e94f8a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
 }
 
 @keyframes indeterminate {
