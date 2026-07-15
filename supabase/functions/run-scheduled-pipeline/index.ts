@@ -87,20 +87,27 @@ Deno.serve(async (req) => {
     // Mark in-progress BEFORE responding so the dashboard poll never
     // falsely sees "idle" in the gap before background work starts.
     await markRunStarted(userId);
+
     const work = runSearchAndSend(userId, { scheduled: false });
-    try {
-      EdgeRuntime.waitUntil(work);
-      return new Response(JSON.stringify({ started: true, userId }), {
-        status: 202,
-        headers: { "Content-Type": "application/json" },
+
+    // NEVER await the hunt on this request path — if we fall back to await,
+    // Vercel Hobby's ~60s limit aborts the call and strands run_started_at.
+    if (typeof EdgeRuntime === "undefined" || typeof EdgeRuntime.waitUntil !== "function") {
+      await markRunFinished(userId, {
+        scheduled: false,
+        error: "Background runner unavailable (EdgeRuntime.waitUntil missing).",
       });
-    } catch {
-      // Local supabase or older runtime without waitUntil — await instead.
-      const result = await work;
-      return new Response(JSON.stringify({ started: true, userId, result }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Background runner unavailable on this runtime." }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      );
     }
+
+    EdgeRuntime.waitUntil(work);
+    return new Response(JSON.stringify({ started: true, userId }), {
+      status: 202,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   const allSettings = await db.select().from(userSettings);

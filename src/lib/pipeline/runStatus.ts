@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { userSettings } from "@/db/schema";
 
 /** A run stuck "in progress" longer than this is treated as crashed, not running. */
-export const STALE_RUN_MINUTES = 10;
+export const STALE_RUN_MINUTES = 3;
 
 /** Non-admins get one manual "Run now" per this window, tracked separately from the schedule. */
 export const MANUAL_RUN_COOLDOWN_HOURS = 12;
@@ -26,6 +26,26 @@ export function hoursUntilManualRunAllowed(
 
 export async function markRunStarted(userId: string) {
   await db.update(userSettings).set({ runStartedAt: new Date() }).where(eq(userSettings.userId, userId));
+}
+
+/**
+ * If a prior run died without clearing the lock (client disconnect / edge kill),
+ * wipe `run_started_at` so the button can recover without waiting forever.
+ */
+export async function clearStaleRunLock(
+  userId: string,
+  runStartedAt: Date | null,
+  now: Date = new Date(),
+): Promise<boolean> {
+  if (!runStartedAt || isRunInProgress(runStartedAt, now)) return false;
+  await db
+    .update(userSettings)
+    .set({
+      runStartedAt: null,
+      lastRunError: "Previous search timed out or was interrupted. Try Run now again.",
+    })
+    .where(eq(userSettings.userId, userId));
+  return true;
 }
 
 /**

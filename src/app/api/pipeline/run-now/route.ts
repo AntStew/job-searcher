@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { userSettings } from "@/db/schema";
 import {
+  clearStaleRunLock,
   hoursUntilManualRunAllowed,
   isRunInProgress,
 } from "@/lib/pipeline/runStatus";
@@ -48,6 +49,8 @@ export async function POST() {
     );
   }
 
+  // Orphaned locks (edge/Vercel died mid-run) expire after STALE_RUN_MINUTES.
+  await clearStaleRunLock(user.id, settings?.runStartedAt ?? null);
   if (isRunInProgress(settings?.runStartedAt ?? null)) {
     return NextResponse.json(
       { error: "A search is already running for you — give it a minute." },

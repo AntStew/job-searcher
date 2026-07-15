@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { userSettings } from "@/db/schema";
-import { isRunInProgress } from "@/lib/pipeline/runStatus";
+import { clearStaleRunLock, isRunInProgress } from "@/lib/pipeline/runStatus";
 import { createClient } from "@/lib/supabase/server";
 
 /** Polled by the dashboard after "Run now" kicks the edge function. */
@@ -25,9 +25,19 @@ export async function GET() {
     .from(userSettings)
     .where(eq(userSettings.userId, user.id));
 
+  const cleared = await clearStaleRunLock(user.id, settings?.runStartedAt ?? null);
+  const runStartedAt = cleared ? null : (settings?.runStartedAt ?? null);
+
+  const [fresh] = cleared
+    ? await db
+        .select({ lastRunError: userSettings.lastRunError })
+        .from(userSettings)
+        .where(eq(userSettings.userId, user.id))
+    : [settings];
+
   return NextResponse.json({
-    running: isRunInProgress(settings?.runStartedAt ?? null),
-    lastRunError: settings?.lastRunError ?? null,
+    running: isRunInProgress(runStartedAt),
+    lastRunError: fresh?.lastRunError ?? null,
     lastManualRunAt: settings?.lastManualRunAt?.toISOString() ?? null,
   });
 }
