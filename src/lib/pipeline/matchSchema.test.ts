@@ -8,7 +8,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
   default: class MockAnthropic {},
 }));
 
-import { matchSchema } from "./searchAndMatchForUser";
+import { matchSchema, parsePostedAt } from "./searchAndMatchForUser";
 
 const VALID = {
   title: "Senior Plumber",
@@ -65,5 +65,25 @@ describe("submit_job_matches result contract", () => {
     expect(matchSchema.safeParse({ ...VALID, score: "87" }).success).toBe(false);
     expect(matchSchema.safeParse({ ...VALID, matched_criteria: "salary" }).success).toBe(false);
     expect(matchSchema.safeParse({ ...VALID, dealbreaker_hit: "no" }).success).toBe(false);
+  });
+});
+
+describe("parsePostedAt", () => {
+  it("parses ISO dates the tool schema asks for", () => {
+    expect(parsePostedAt("2026-07-10")?.toISOString()).toBe("2026-07-10T00:00:00.000Z");
+    expect(parsePostedAt("2026-07-10T14:30:00Z")?.toISOString()).toBe("2026-07-10T14:30:00.000Z");
+  });
+
+  it("returns null for missing values", () => {
+    expect(parsePostedAt(null)).toBeNull();
+    expect(parsePostedAt(undefined)).toBeNull();
+    expect(parsePostedAt("")).toBeNull();
+  });
+
+  it("returns null instead of an Invalid Date for prose the agent emits", () => {
+    // These crashed the whole run with "Invalid time value" at DB-insert time.
+    expect(parsePostedAt("2 weeks ago")).toBeNull();
+    expect(parsePostedAt("recently")).toBeNull();
+    expect(parsePostedAt("Posted 3 days ago")).toBeNull();
   });
 });

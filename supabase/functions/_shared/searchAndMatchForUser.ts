@@ -86,12 +86,38 @@ export const matchSchema = z.object({
   posted_at: z.string().nullable().optional(),
 });
 
+/**
+ * The agent sometimes emits posted_at values that aren't parseable dates
+ * ("2 weeks ago", "recently"). An Invalid Date here used to crash the whole
+ * run at insert time ("Invalid time value"), so treat unparseable as unknown.
+ */
+export function parsePostedAt(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export type SearchAndMatchResult = {
   found: number;
   upserted: number;
   scored: number;
   errors: string[];
+  /**
+   * True when the run produced zero usable matches for a benign reason
+   * (agent timed out, got cut off, or genuinely found nothing new) — the
+   * caller sends a friendly "came up empty" note instead of a failure alert.
+   */
+  cameUpEmpty: boolean;
 };
+
+/**
+ * Hard deadline on the agent call. Supabase's free-plan edge workers are
+ * killed at ~150s wall clock (measured: every historical failure died at
+ * 153-154s), and a killed run records nothing. 100s leaves ~50s of worker
+ * budget to save results, send the digest, and record the outcome — turning
+ * a silent death into a handled "came up empty" email.
+ */
+const SEARCH_TIMEOUT_MS = 120 * 1000;
 
 /**
  * One Claude agent call does the web searching (server-executed web_search
@@ -107,7 +133,13 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     .where(eq(jobPreferences.userId, userId));
 
   if (!profile || !preferences) {
-    return { found: 0, upserted: 0, scored: 0, errors: ["No profile or preferences set yet"] };
+    return {
+      found: 0,
+      upserted: 0,
+      scored: 0,
+      errors: ["No profile or preferences set yet"],
+      cameUpEmpty: false,
+    };
   }
 
   // Give the agent this user's history: jobs already shown (so it doesn't
@@ -133,22 +165,36 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
 
   let response;
   try {
-    response = await anthropic.messages.create({
-      model: "claude-sonnet-5",
-      max_tokens: 12000,
-      tools: [
-        // The 20260209 variant filters results with server-side code before
-        // they hit the context window — better matches, fewer input tokens.
-        { type: "web_search_20260209", name: "web_search", max_uses: 15 },
-        SUBMIT_JOB_MATCHES_TOOL,
-      ],
-      tool_choice: { type: "auto" },
-      messages: [{ role: "user", content: prompt }],
-    });
+    response = await anthropic.messages.create(
+      {
+        model: "claude-sonnet-5",
+        // Output tokens dominate latency — a tighter cap keeps the emission
+        // phase short so the run lands inside SEARCH_TIMEOUT_MS.
+        max_tokens: 8000,
+        tools: [
+          // The 20260209 variant filters results with server-side code before
+          // they hit the context window — better matches, fewer input tokens.
+          // max_uses is deliberately low: the whole search must land inside
+          // SEARCH_TIMEOUT_MS. See MAX_RESULTS in buildSearchPrompt.
+          { type: "web_search_20260209", name: "web_search", max_uses: 3 },
+          SUBMIT_JOB_MATCHES_TOOL,
+        ],
+        tool_choice: { type: "auto" },
+        messages: [{ role: "user", content: prompt }],
+      },
+      // maxRetries: 0 keeps the deadline hard — the SDK's default retries
+      // would triple it.
+      { timeout: SEARCH_TIMEOUT_MS, maxRetries: 0 },
+    );
   } catch (err) {
+    if (err instanceof Anthropic.APIConnectionTimeoutError) {
+      const message = "Search agent ran out of time this run.";
+      console.error("[searchAndMatchForUser]", message);
+      return { found: 0, upserted: 0, scored: 0, errors: [message], cameUpEmpty: true };
+    }
     const message = `Search agent call failed: ${err instanceof Error ? err.message : String(err)}`;
     console.error("[searchAndMatchForUser]", message);
-    return { found: 0, upserted: 0, scored: 0, errors: [message] };
+    return { found: 0, upserted: 0, scored: 0, errors: [message], cameUpEmpty: false };
   }
 
   await recordUsage(userId, response.usage);
@@ -157,7 +203,7 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     const message =
       "Search agent ran out of room before finishing its results — its submission was cut off and discarded.";
     console.error("[searchAndMatchForUser]", message);
-    return { found: 0, upserted: 0, scored: 0, errors: [message] };
+    return { found: 0, upserted: 0, scored: 0, errors: [message], cameUpEmpty: true };
   }
 
   const toolUse = response.content.find(
@@ -168,14 +214,14 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
   if (!toolUse) {
     const message = "Search agent did not return any results this run.";
     console.error("[searchAndMatchForUser]", message, JSON.stringify(response.content));
-    return { found: 0, upserted: 0, scored: 0, errors: [message] };
+    return { found: 0, upserted: 0, scored: 0, errors: [message], cameUpEmpty: true };
   }
 
   const parsed = z.object({ matches: z.array(matchSchema) }).safeParse(toolUse.input);
   if (!parsed.success) {
     const message = `Search agent returned malformed results: ${parsed.error.message}`;
     console.error("[searchAndMatchForUser]", message);
-    return { found: 0, upserted: 0, scored: 0, errors: [message] };
+    return { found: 0, upserted: 0, scored: 0, errors: [message], cameUpEmpty: true };
   }
 
   const matches = parsed.data.matches;
@@ -194,7 +240,7 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
       salaryMax: match.salary_max ?? null,
       experienceRequired: match.experience_required ?? null,
       descriptionText: "",
-      postedAt: match.posted_at ? new Date(match.posted_at) : null,
+      postedAt: parsePostedAt(match.posted_at),
       rawJson: match,
     };
   });
@@ -222,5 +268,11 @@ export async function searchAndMatchForUser(userId: string): Promise<SearchAndMa
     scored += 1;
   }
 
-  return { found: matches.length, upserted: upserted.length, scored, errors };
+  return {
+    found: matches.length,
+    upserted: upserted.length,
+    scored,
+    errors,
+    cameUpEmpty: matches.length === 0,
+  };
 }

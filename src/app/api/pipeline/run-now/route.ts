@@ -12,13 +12,15 @@ import { createClient } from "@/lib/supabase/server";
 /**
  * Manual "Run now" for the current user.
  *
- * IMPORTANT: the search itself does NOT run on Vercel. Hobby plans kill
- * functions around ~60s, and a Sonnet + web_search hunt often takes minutes —
- * that was stranding `run_started_at` and freezing the button. Instead we
- * auth/cooldown-check here, then kick the Supabase edge function (same one
- * the hourly cron uses) with `{ userId, manual: true }`, which returns 202
- * and finishes the hunt in the background.
+ * The search itself does NOT run on Vercel: we auth/cooldown-check here,
+ * then call the Supabase edge function (same one the hourly cron uses) with
+ * `{ userId, manual: true }`. The edge function runs the hunt INLINE — its
+ * background tasks get CPU-starved, so the response takes a couple of
+ * minutes; maxDuration below gives this proxy room to wait it out. The
+ * dashboard doesn't depend on this response: it polls run-status either way.
  */
+export const maxDuration = 300;
+
 export async function POST() {
   const supabase = await createClient();
   const {

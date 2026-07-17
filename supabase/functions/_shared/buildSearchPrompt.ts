@@ -4,7 +4,10 @@ import { TAUNTS } from "./taunts.ts";
 type Profile = typeof userProfiles.$inferSelect;
 type Preferences = typeof jobPreferences.$inferSelect;
 
-const MAX_RESULTS = 15;
+// Kept modest on purpose: more results means more web searches, and runs
+// that outlive the edge runtime's wall-clock budget die silently. A digest
+// that arrives beats a thorough one that doesn't.
+const MAX_RESULTS = 7;
 
 export type SearchHistory = {
   /** "Title at Company" lines the user has already been shown. */
@@ -92,7 +95,7 @@ export function buildSearchPrompt(
     [
       "# Your task",
       `Search the web for real, currently open job postings that genuinely fit this candidate. Prioritize quality over quantity — up to ${MAX_RESULTS} strong candidates is plenty; fewer honest matches beat a padded list. Prefer recently posted listings — a great job posted this week beats an equally great one posted months ago that may already be filled.`,
-      "Cast a wide net across different kinds of sources rather than relying on just one or two searches — for example: LinkedIn Jobs, Indeed, Glassdoor, ZipRecruiter, Wellfound/AngelList (for startups), Y Combinator's Work at a Startup board, industry- or role-specific boards where relevant, and individual company career pages (especially any companies named above). Don't stop after the first search; run several searches with different phrasing and sources to find the best possible set of matches.",
+      "You have a tight time budget: run at most 3 focused web searches, then submit what you have. Choose the sources most likely to fit this candidate — e.g. one broad job-board search (LinkedIn/Indeed/Glassdoor) plus one or two targeted ones (Wellfound or Y Combinator's board for startups, an industry-specific board, or a named company's careers page). A short honest list beats a long hunt that never finishes.",
       "For each listing you include, read enough of it to honestly judge fit against the resume and everything above, and note the experience level or years of experience it asks for.",
       "Don't exclude a job just because it conflicts with something the candidate said matters to them — include it, but set dealbreaker_hit to true and reflect that honestly in the score and reasoning.",
       `Once you've finished searching, call submit_job_matches exactly once with everything you found (no more than ${MAX_RESULTS} results). Do not call it before you're done searching.`,

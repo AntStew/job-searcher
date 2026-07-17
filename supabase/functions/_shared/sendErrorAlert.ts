@@ -37,3 +37,32 @@ export async function sendErrorAlert(userEmail: string, errorSummary: string) {
     console.error("[sendErrorAlert] failed to send alert:", err);
   }
 }
+
+/**
+ * Sent when a scheduled run finished but has nothing to show — the agent
+ * timed out, got cut off, or genuinely found nothing new. Users asked for
+ * a "we came up empty" note over silence (silence looks like the app broke).
+ * Failures are swallowed for the same reason as sendErrorAlert.
+ */
+export async function sendEmptyRunEmail(userEmail: string) {
+  const from = Deno.env.get("EMAIL_FROM") ?? "Unemployment Final Boss <jobs@example.com>";
+  const baseUrl = Deno.env.get("APP_BASE_URL") ?? "";
+
+  const html = `<!doctype html>
+<html><body style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+  <h2 style="margin:0 0 8px;">Struck out today — nothing worth sending</h2>
+  <p style="color:#374151;">The search ran, but nothing new made the cut this time. Could be a slow day for postings, or the hunt got cut short. Either way: no news is just no news — the next scheduled search happens automatically.</p>
+  <p style="color:#374151;">Feeling impatient? You can always <a href="${baseUrl}/dashboard" style="color:#0f8a7a;">open your dashboard</a> and hit Run now yourself.</p>
+</body></html>`;
+
+  try {
+    await resend.emails.send({
+      from,
+      to: userEmail,
+      subject: "No new matches today — the hunt continues",
+      html,
+    });
+  } catch (err) {
+    console.error("[sendEmptyRunEmail] failed to send:", err);
+  }
+}
